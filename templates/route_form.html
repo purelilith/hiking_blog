@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Новый маршрут{% endblock %}
+{% block title %}{{ 'Редактирование маршрута' if editing else 'Новый маршрут' }}{% endblock %}
 {% block head %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
@@ -13,8 +13,7 @@
       {% endfor %}
     </select>
   {% endmacro %}
-
-  <h1>Новый маршрут</h1>
+  <h1>{{ 'Редактирование маршрута' if editing else 'Новый маршрут' }}</h1>
   <form method="post">
     <label for="title">Название</label>
     <input id="title" name="title" type="text" required maxlength="120" value="{{ form.get('title', '') }}">
@@ -40,7 +39,7 @@
       <input id="max_slope" name="max_slope" type="text" value="{{ form.get('max_slope', '') }}">
       <label for="rest_points">Места отдыха (скамейки, навесы)</label>
       <input id="rest_points" name="rest_points" type="text" value="{{ form.get('rest_points', '') }}">
-      <label><input name="has_steps" type="checkbox" {% if form.get('has_steps') %}checked{% endif %}> На маршруте есть ступеньки</label>
+      <label><input name="is_public" type="checkbox" {% if form.get('is_public') %}checked{% endif %}> Сделать маршрут публичным (если снять галочку, его увидите только вы)</label>
     </fieldset>
 
     <fieldset>

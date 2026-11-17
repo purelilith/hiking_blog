@@ -9,7 +9,18 @@
   <p>Автор: {{ route['username'] }}. Регион: {{ route['region'] }}. {{ route['length_km'] }} км,
      {{ route['days'] }} дн., сложность: {{ difficulty[route['difficulty']] }}.</p>
   {% if not route['is_public'] %}<p>Приватный маршрут: его видите только вы.</p>{% endif %}
-
+  {% if g.user and g.user['id'] == route['author_id'] %}
+    <section aria-label="Управление маршрутом">
+      <a href="{{ url_for('routes.edit', route_id=route['id']) }}">Редактировать</a>
+      <form method="post" action="{{ url_for('routes.toggle_visibility', route_id=route['id']) }}">
+        <button type="submit">{{ 'Сделать приватным' if route['is_public'] else 'Сделать публичным' }}</button>
+      </form>
+      <form method="post" action="{{ url_for('routes.delete', route_id=route['id']) }}"
+            onsubmit="return confirm('Удалить маршрут насовсем?');">
+        <button type="submit">Удалить</button>
+      </form>
+    </section>
+  {% endif %}
   <h2>Описание</h2>
   <p class="prewrap">{{ route['description'] }}</p>
 

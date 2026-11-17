@@ -51,70 +51,156 @@ def num(name):
         return None
 
 
+INSERT_SQL = """INSERT INTO routes
+    (author_id, title, region, length_km, difficulty, days, season, terrain, description,
+     restrictions, source_url, source_checked, open_from, open_to, is_public,
+     surface, max_slope, has_steps, rest_points)
+    VALUES (:author_id, :title, :region, :length_km, :difficulty, :days, :season, :terrain,
+     :description, :restrictions, :source_url, :source_checked, :open_from, :open_to,
+     :is_public, :surface, :max_slope, :has_steps, :rest_points)"""
+
+UPDATE_SQL = """UPDATE routes SET title=:title, region=:region, length_km=:length_km,
+    difficulty=:difficulty, days=:days, season=:season, terrain=:terrain,
+    description=:description, restrictions=:restrictions, source_url=:source_url,
+    source_checked=:source_checked, open_from=:open_from, open_to=:open_to,
+    is_public=:is_public, surface=:surface, max_slope=:max_slope, has_steps=:has_steps,
+    rest_points=:rest_points WHERE id=:id AND author_id=:author_id"""
+
+
+def read_route_form(f):
+    """Проверяет форму. Возвращает (данные для базы, точки, текст ошибки или None)."""
+    def opt(name):
+        return f.get(name, "").strip() or None
+
+    title = f.get("title", "").strip()
+    region = f.get("region", "").strip()
+    description = f.get("description", "").strip()
+    source_url = opt("source_url")
+    open_from, open_to, source_checked = opt("open_from"), opt("open_to"), opt("source_checked")
+    points = parse_points(f.get("points", "[]"))
+    long_fields = [opt("restrictions"), opt("surface"), opt("max_slope"),
+                   opt("rest_points"), source_url]
+    try:
+        days = int(f.get("days", "1"))
+    except ValueError:
+        days = 0
+
+    error = None
+    if not title or not region or not description:
+        error = "Заполните название, регион и описание."
+    elif len(title) > 120 or len(region) > 100:
+        error = "Название не длиннее 120 символов, регион не длиннее 100."
+    elif len(description) > 10000 or any(t and len(t) > 1000 for t in long_fields):
+        error = "Один из текстов слишком длинный."
+    elif (f.get("difficulty") not in DIFFICULTY or f.get("season") not in SEASONS
+          or f.get("terrain") not in TERRAINS):
+        error = "Выберите значения из списков."
+    elif not 1 <= days <= 30:
+        error = "Число дней должно быть от 1 до 30."
+    elif source_url and not source_url.startswith(("http://", "https://")):
+        error = "Ссылка должна начинаться с http:// или https://."
+    elif any(d and not valid_date(d) for d in (open_from, open_to, source_checked)):
+        error = "Даты введены неверно."
+    elif open_from and open_to and open_from > open_to:
+        error = "Дата открытия позже даты закрытия."
+    elif points is None or len(points) < 2:
+        error = "Добавьте на карте минимум две точки маршрута."
+
+    data = {
+        "title": title, "region": region,
+        "length_km": path_length_km(points) if points else 0,
+        "difficulty": f.get("difficulty"), "days": days, "season": f.get("season"),
+        "terrain": f.get("terrain"), "description": description,
+        "restrictions": opt("restrictions"), "source_url": source_url,
+        "source_checked": source_checked, "open_from": open_from, "open_to": open_to,
+        "is_public": 1 if f.get("is_public") else 0, "surface": opt("surface"),
+        "max_slope": opt("max_slope"), "has_steps": 1 if f.get("has_steps") else 0,
+        "rest_points": opt("rest_points"),
+    }
+    return data, points, error
+
+
+def save_points(db, route_id, points):
+    db.executemany(
+        "INSERT INTO route_points (route_id, position, lat, lon) VALUES (?, ?, ?, ?)",
+        [(route_id, i, lat, lon) for i, (lat, lon) in enumerate(points)],
+    )
+
+
+def get_own_route(route_id):
+    """Достаёт маршрут и проверяет, что он принадлежит вошедшему пользователю."""
+    route = get_db().execute("SELECT * FROM routes WHERE id = ?", (route_id,)).fetchone()
+    if route is None:
+        abort(404)
+    if route["author_id"] != g.user["id"]:
+        abort(403)
+    return route
+
+
 @bp.route("/new", methods=("GET", "POST"))
 @login_required
 def create():
     if request.method == "POST":
-        f = request.form
-
-        def opt(name):
-            return f.get(name, "").strip() or None
-
-        title = f.get("title", "").strip()
-        region = f.get("region", "").strip()
-        description = f.get("description", "").strip()
-        source_url = opt("source_url")
-        points = parse_points(f.get("points", "[]"))
-        open_from, open_to = opt("open_from"), opt("open_to")
-        source_checked = opt("source_checked")
-        is_public = 1 if f.get("is_public") else 0
-        try:
-            days = int(f.get("days", "1"))
-        except ValueError:
-            days = 0
-
-        error = None
-        if not title or not region or not description:
-            error = "Заполните название, регион и описание."
-        elif len(title) > 120:
-            error = "Название не длиннее 120 символов."
-        elif (f.get("difficulty") not in DIFFICULTY or f.get("season") not in SEASONS
-              or f.get("terrain") not in TERRAINS):
-            error = "Выберите значения из списков."
-        elif not 1 <= days <= 30:
-            error = "Число дней должно быть от 1 до 30."
-        elif source_url and not source_url.startswith(("http://", "https://")):
-            error = "Ссылка должна начинаться с http:// или https://."
-        elif any(d and not valid_date(d) for d in (open_from, open_to, source_checked)):
-            error = "Даты введены неверно."
-        elif open_from and open_to and open_from > open_to:
-            error = "Дата открытия позже даты закрытия."
-        elif points is None or len(points) < 2:
-            error = "Добавьте на карте минимум две точки маршрута."
-
+        data, points, error = read_route_form(request.form)
         if error is None:
             db = get_db()
-            cur = db.execute(
-                """INSERT INTO routes
-                   (author_id, title, region, length_km, difficulty, days, season, terrain,
-                    description, restrictions, source_url, source_checked, open_from, open_to,
-                    is_public, surface, max_slope, has_steps, rest_points)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (g.user["id"], title, region, path_length_km(points), f["difficulty"], days,
-                 f["season"], f["terrain"], description, opt("restrictions"), source_url,
-                 source_checked, open_from, open_to, is_public, opt("surface"),
-                 opt("max_slope"), 1 if f.get("has_steps") else 0, opt("rest_points")),
-            )
-            db.executemany(
-                "INSERT INTO route_points (route_id, position, lat, lon) VALUES (?, ?, ?, ?)",
-                [(cur.lastrowid, i, lat, lon) for i, (lat, lon) in enumerate(points)],
-            )
+            cur = db.execute(INSERT_SQL, {**data, "author_id": g.user["id"]})
+            save_points(db, cur.lastrowid, points)
             db.commit()
             flash("Маршрут сохранён.")
             return redirect(url_for("routes.detail", route_id=cur.lastrowid))
-
-    return render_template("route_form.html", form=request.form,
+        flash(error)
+    form = request.form if request.method == "POST" else {"is_public": 1}
+    return render_template("route_form.html", form=form, editing=False,
                            difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
+
+
+@bp.route("/<int:route_id>/edit", methods=("GET", "POST"))
+@login_required
+def edit(route_id):
+    route = get_own_route(route_id)
+    db = get_db()
+    if request.method == "POST":
+        data, points, error = read_route_form(request.form)
+        if error is None:
+            db.execute(UPDATE_SQL, {**data, "id": route_id, "author_id": g.user["id"]})
+            db.execute("DELETE FROM route_points WHERE route_id = ?", (route_id,))
+            save_points(db, route_id, points)
+            db.commit()
+            flash("Изменения сохранены.")
+            return redirect(url_for("routes.detail", route_id=route_id))
+        flash(error)
+        form = request.form
+    else:
+        points = [[p["lat"], p["lon"]] for p in db.execute(
+            "SELECT lat, lon FROM route_points WHERE route_id = ? ORDER BY position", (route_id,))]
+        form = {**dict(route), "points": json.dumps(points)}
+    return render_template("route_form.html", form=form, editing=True,
+                           difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
+
+
+@bp.route("/<int:route_id>/visibility", methods=("POST",))
+@login_required
+def toggle_visibility(route_id):
+    route = get_own_route(route_id)
+    db = get_db()
+    db.execute("UPDATE routes SET is_public = ? WHERE id = ? AND author_id = ?",
+               (0 if route["is_public"] else 1, route_id, g.user["id"]))
+    db.commit()
+    flash("Видимость маршрута изменена.")
+    return redirect(url_for("routes.detail", route_id=route_id))
+
+
+@bp.route("/<int:route_id>/delete", methods=("POST",))
+@login_required
+def delete(route_id):
+    get_own_route(route_id)
+    db = get_db()
+    db.execute("DELETE FROM routes WHERE id = ? AND author_id = ?", (route_id, g.user["id"]))
+    db.commit()
+    flash("Маршрут удалён.")
+    return redirect(url_for("routes.mine"))
+
 @bp.route("/")
 def catalog():
     where = ["(r.is_public = 1 OR r.author_id = ?)"]

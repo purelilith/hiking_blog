@@ -6,6 +6,7 @@
     {% for r in routes %}
       <li>
         <h2><a href="{{ url_for('routes.detail', route_id=r['id']) }}">{{ r['title'] }}</a></h2>
+        <p><a href="{{ url_for('routes.edit', route_id=r['id']) }}">Редактировать</a></p>
         <p>{{ r['region'] }} · {{ r['length_km'] }} км · {{ r['days'] }} дн. · {{ difficulty[r['difficulty']] }} ·
            {{ 'публичный' if r['is_public'] else 'приватный' }}</p>
       </li>
