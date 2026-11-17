@@ -13,6 +13,8 @@
   <header>
     <nav aria-label="Основное меню">
       <a href="{{ url_for('pages.index') }}">Главная</a>
+      <a href="{{ url_for('routes.catalog') }}">Каталог</a>
+      <a href="{{ url_for('routes.mine') }}">Мои маршруты</a>
       <a href="{{ url_for('pages.about') }}">О проекте</a>
       {% if g.user %}
         <a href="{{ url_for('routes.create') }}">Новый маршрут</a>

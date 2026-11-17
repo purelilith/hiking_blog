@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ route['title'] }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ route['title'] }}</h1>
+  <p>Автор: {{ route['username'] }}. Регион: {{ route['region'] }}. {{ route['length_km'] }} км,
+     {{ route['days'] }} дн., сложность: {{ difficulty[route['difficulty']] }}.</p>
+  {% if not route['is_public'] %}<p>Приватный маршрут: его видите только вы.</p>{% endif %}
+
+  <h2>Описание</h2>
+  <p class="prewrap">{{ route['description'] }}</p>
+
+  <h2>Сроки, ограничения и источник</h2>
+  <dl>
+    <dt>Маршрут открыт</dt>
+    <dd>{% if route['open_from'] or route['open_to'] %}с {{ route['open_from'] or '—' }} по {{ route['open_to'] or '—' }}{% else %}даты не указаны{% endif %}</dd>
+    <dt>Ограничения</dt>
+    <dd>{{ route['restrictions'] or 'не указаны' }}</dd>
+    <dt>Источник</dt>
+    <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}</dd>
+    <dt>Данные собраны и проверены</dt>
+    <dd>{{ route['source_checked'] or 'дата не указана' }}</dd>
+  </dl>
+  <p>Перед выходом уточните актуальность информации на сайте источника.</p>
+
+  <h2>Доступность</h2>
+  <dl>
+    <dt>Покрытие</dt><dd>{{ route['surface'] or 'не указано' }}</dd>
+    <dt>Самый крутой подъём</dt><dd>{{ route['max_slope'] or 'не указан' }}</dd>
+    <dt>Ступеньки</dt><dd>{{ 'есть' if route['has_steps'] else 'нет' }}</dd>
+    <dt>Места отдыха</dt><dd>{{ route['rest_points'] or 'не указаны' }}</dd>
+  </dl>
+
+  <h2>Карта</h2>
+  <div id="map" data-points='{{ points | tojson }}' aria-label="Карта маршрута"></div>
+
+  <h2>Маршрут по точкам (текстовая версия)</h2>
+  <ol>
+    {% for p in points %}
+      <li>Точка {{ loop.index }}: {{ '%.5f'|format(p[0]) }}, {{ '%.5f'|format(p[1]) }}</li>
+    {% endfor %}
+  </ol>
+
+  <h2>Что взять с собой</h2>
+  {% for category, items in gear|groupby('category') %}
+    <h3>{{ category }}</h3>
+    <ul>{% for item in items %}<li>{{ item['name'] }}</li>{% endfor %}</ul>
+  {% else %}
+    <p>Для этого маршрута пока нет подобранного снаряжения.</p>
+  {% endfor %}
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/route_map.js') }}"></script>
+{% endblock %}

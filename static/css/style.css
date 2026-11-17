@@ -35,3 +35,6 @@ button { margin-top: 1rem; cursor: pointer; }
 #map { height: 22rem; max-width: 100%; margin-top: .5rem; }
 textarea, select { font: inherit; padding: .5rem; width: 100%; max-width: 40rem; box-sizing: border-box; }
 fieldset { margin-top: 1.5rem; border: 2px solid var(--text); }
+.prewrap { white-space: pre-wrap; }
+.route-list { list-style: none; padding: 0; }
+dt { font-weight: 600; margin-top: .75rem; }

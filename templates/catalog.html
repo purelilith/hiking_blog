@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Каталог маршрутов{% endblock %}
+{% block content %}
+  {% macro select(name, label, options) %}
+    <label for="{{ name }}">{{ label }}</label>
+    <select id="{{ name }}" name="{{ name }}">
+      <option value="">Любая</option>
+      {% for key, text in options.items() if key != 'any' %}
+        <option value="{{ key }}" {% if args.get(name) == key %}selected{% endif %}>{{ text }}</option>
+      {% endfor %}
+    </select>
+  {% endmacro %}
+
+  <h1>Каталог маршрутов</h1>
+  <form method="get" aria-label="Фильтры маршрутов">
+    <label for="region">Регион</label>
+    <input id="region" name="region" type="text" value="{{ args.get('region', '') }}">
+    {{ select("difficulty", "Сложность", difficulty) }}
+    {{ select("terrain", "Тип местности", terrains) }}
+    <label for="min_km">Длина от, км</label>
+    <input id="min_km" name="min_km" type="number" min="0" step="any" value="{{ args.get('min_km', '') }}">
+    <label for="max_km">Длина до, км</label>
+    <input id="max_km" name="max_km" type="number" min="0" step="any" value="{{ args.get('max_km', '') }}">
+    <label for="days">Дней в пути</label>
+    <input id="days" name="days" type="number" min="1" max="30" value="{{ args.get('days', '') }}">
+    <label><input name="no_steps" type="checkbox" {% if args.get('no_steps') %}checked{% endif %}> Без ступенек</label>
+    <button type="submit">Найти</button>
+    <a href="{{ url_for('routes.catalog') }}">Сбросить</a>
+  </form>
+
+  <p role="status">Найдено маршрутов: {{ total }}</p>
+  <ul class="route-list">
+    {% for r in routes %}
+      <li>
+        <h2><a href="{{ url_for('routes.detail', route_id=r['id']) }}">{{ r['title'] }}</a></h2>
+        <p>{{ r['region'] }} · {{ r['length_km'] }} км · {{ r['days'] }} дн. · {{ difficulty[r['difficulty']] }}{% if not r['is_public'] %} · виден только вам{% endif %}</p>
+      </li>
+    {% else %}
+      <li>Ничего не найдено.</li>
+    {% endfor %}
+  </ul>
+    {% if pages > 1 %}
+    <nav aria-label="Страницы каталога">
+      {% if page > 1 %}<a href="{{ url_for('routes.catalog', page=page - 1, **filters) }}">← Назад</a>{% endif %}
+      <span>Страница {{ page }} из {{ pages }}</span>
+      {% if page < pages %}<a href="{{ url_for('routes.catalog', page=page + 1, **filters) }}">Вперёд →</a>{% endif %}
+    </nav>
+    {% endif %}
+{% endblock %}

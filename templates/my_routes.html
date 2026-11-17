@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Мои маршруты{% endblock %}
+{% block content %}
+  <h1>Мои маршруты</h1>
+  <ul class="route-list">
+    {% for r in routes %}
+      <li>
+        <h2><a href="{{ url_for('routes.detail', route_id=r['id']) }}">{{ r['title'] }}</a></h2>
+        <p>{{ r['region'] }} · {{ r['length_km'] }} км · {{ r['days'] }} дн. · {{ difficulty[r['difficulty']] }} ·
+           {{ 'публичный' if r['is_public'] else 'приватный' }}</p>
+      </li>
+    {% else %}
+      <li>У вас пока нет маршрутов. <a href="{{ url_for('routes.create') }}">Создать первый</a>.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

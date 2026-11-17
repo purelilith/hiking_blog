@@ -45,11 +45,11 @@
 
     <fieldset>
       <legend>Ограничения и источник</legend>
-      <label for="restrictions">Ограничения посещения (пропуска, закрытые сезоны, запреты)</label>
-      <textarea id="restrictions" name="restrictions" rows="3">{{ form.get('restrictions', '') }}</textarea>
-      <label for="source_url">Ссылка на источник</label>
-      <input id="source_url" name="source_url" type="url" value="{{ form.get('source_url', '') }}">
-      <label for="source_checked">Дата проверки</label>
+      <label for="open_from">Маршрут открыт с</label>
+      <input id="open_from" name="open_from" type="date" value="{{ form.get('open_from', '') }}">
+      <label for="open_to">Маршрут открыт по</label>
+      <input id="open_to" name="open_to" type="date" value="{{ form.get('open_to', '') }}">
+      <label for="source_checked">Когда собраны и проверены данные</label>
       <input id="source_checked" name="source_checked" type="date" value="{{ form.get('source_checked', '') }}">
     </fieldset>
 
@@ -71,7 +71,7 @@
       <ol id="points-list"></ol>
       <input type="hidden" id="points" name="points" value="{{ form.get('points', '[]') }}">
     </fieldset>
-
+    <label><input name="is_public" type="checkbox" checked> Сделать маршрут публичным (если снять галочку, его увидите только вы)</label>
     <button type="submit">Сохранить маршрут</button>
   </form>
 {% endblock %}
