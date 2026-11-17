@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Новый маршрут{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+  {% macro select(name, label, options) %}
+    <label for="{{ name }}">{{ label }}</label>
+    <select id="{{ name }}" name="{{ name }}">
+      {% for key, text in options.items() %}
+        <option value="{{ key }}" {% if form.get(name) == key %}selected{% endif %}>{{ text }}</option>
+      {% endfor %}
+    </select>
+  {% endmacro %}
+
+  <h1>Новый маршрут</h1>
+  <form method="post">
+    <label for="title">Название</label>
+    <input id="title" name="title" type="text" required maxlength="120" value="{{ form.get('title', '') }}">
+
+    <label for="region">Регион</label>
+    <input id="region" name="region" type="text" required value="{{ form.get('region', '') }}">
+
+    <label for="days">Дней в пути</label>
+    <input id="days" name="days" type="number" min="1" max="30" required value="{{ form.get('days', 1) }}">
+
+    {{ select("difficulty", "Сложность", difficulty) }}
+    {{ select("season", "Лучший сезон", seasons) }}
+    {{ select("terrain", "Тип местности", terrains) }}
+
+    <label for="description">Описание (расскажите о маршруте как путешественник путешественникам)</label>
+    <textarea id="description" name="description" rows="8" required>{{ form.get('description', '') }}</textarea>
+
+    <fieldset>
+      <legend>Доступность</legend>
+      <label for="surface">Покрытие (асфальт, грунт, камни…)</label>
+      <input id="surface" name="surface" type="text" value="{{ form.get('surface', '') }}">
+      <label for="max_slope">Самый крутой подъём</label>
+      <input id="max_slope" name="max_slope" type="text" value="{{ form.get('max_slope', '') }}">
+      <label for="rest_points">Места отдыха (скамейки, навесы)</label>
+      <input id="rest_points" name="rest_points" type="text" value="{{ form.get('rest_points', '') }}">
+      <label><input name="has_steps" type="checkbox" {% if form.get('has_steps') %}checked{% endif %}> На маршруте есть ступеньки</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Ограничения и источник</legend>
+      <label for="restrictions">Ограничения посещения (пропуска, закрытые сезоны, запреты)</label>
+      <textarea id="restrictions" name="restrictions" rows="3">{{ form.get('restrictions', '') }}</textarea>
+      <label for="source_url">Ссылка на источник</label>
+      <input id="source_url" name="source_url" type="url" value="{{ form.get('source_url', '') }}">
+      <label for="source_checked">Дата проверки</label>
+      <input id="source_checked" name="source_checked" type="date" value="{{ form.get('source_checked', '') }}">
+    </fieldset>
+
+    <fieldset>
+      <legend>Маршрут на карте</legend>
+      <p>Щёлкайте по карте, чтобы ставить точки по порядку, или введите координаты вручную. Длина посчитается автоматически.</p>
+      <div id="map" aria-label="Карта для расстановки точек маршрута"></div>
+
+      <label for="lat-input">Широта</label>
+      <input id="lat-input" type="text" inputmode="decimal">
+      <label for="lon-input">Долгота</label>
+      <input id="lon-input" type="text" inputmode="decimal">
+      <button type="button" id="add-point">Добавить точку</button>
+      <button type="button" id="undo-point">Удалить последнюю</button>
+      <button type="button" id="clear-points">Очистить</button>
+      <p id="point-status" role="status"></p>
+
+      <h2>Точки маршрута</h2>
+      <ol id="points-list"></ol>
+      <input type="hidden" id="points" name="points" value="{{ form.get('points', '[]') }}">
+    </fieldset>
+
+    <button type="submit">Сохранить маршрут</button>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% endblock %}

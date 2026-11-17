@@ -1,0 +1,37 @@
+:root {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+  --link: #0b3d91;
+  --accent: #0b3d91;
+  --focus: #ff8c00;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  margin: 0;
+}
+
+header, main, footer { max-width: 60rem; margin: 0 auto; padding: 1rem; }
+nav { display: flex; flex-wrap: wrap; gap: 1rem; }
+a { color: var(--link); }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.skip-link {
+  position: absolute; left: -999px; background: #fff; padding: .5rem 1rem;
+}
+.skip-link:focus { left: 0; top: 0; z-index: 10; }
+
+label { display: block; margin-top: 1rem; font-weight: 600; }
+input, button { font: inherit; padding: .5rem; max-width: 100%; box-sizing: border-box; }
+input { width: 100%; max-width: 24rem; }
+button { margin-top: 1rem; cursor: pointer; }
+.message { padding: .75rem; border: 2px solid #b00020; background: #fdecee; }
+
+#map { height: 22rem; max-width: 100%; margin-top: .5rem; }
+textarea, select { font: inherit; padding: .5rem; width: 100%; max-width: 40rem; box-sizing: border-box; }
+fieldset { margin-top: 1.5rem; border: 2px solid var(--text); }
