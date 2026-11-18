@@ -27,6 +27,7 @@ CREATE TABLE routes (
     open_from      TEXT,
     open_to        TEXT,
     is_public      INTEGER NOT NULL DEFAULT 1,
+    views          INTEGER NOT NULL DEFAULT 0,
     surface        TEXT,
     max_slope      TEXT,
     has_steps      INTEGER NOT NULL DEFAULT 0,

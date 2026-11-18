@@ -5,6 +5,7 @@ from datetime import date
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from db import get_db
+import db
 from views.auth import login_required
 
 bp = Blueprint("routes", __name__, url_prefix="/routes")
@@ -132,6 +133,9 @@ def get_own_route(route_id):
     route = get_db().execute("SELECT * FROM routes WHERE id = ?", (route_id,)).fetchone()
     if route is None:
         abort(404)
+    if g.user is None or g.user["id"] != route["author_id"]:
+        db.execute("UPDATE routes SET views = views + 1 WHERE id = ?", (route_id,))
+        db.commit()
     if route["author_id"] != g.user["id"]:
         abort(403)
     return route

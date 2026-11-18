@@ -1,0 +1,14 @@
+<li class="route-card">
+  <img src="{{ route_image(r['id']) }}" alt="Фото маршрута: {{ r['title'] }}"
+       width="400" height="300" loading="lazy">
+  <div>
+    <h3><a href="{{ url_for('routes.detail', route_id=r['id']) }}">{{ r['title'] }}</a></h3>
+    <ul class="meta">
+      <li><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><span>{{ r['region'] }}</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg><span>Протяжённость: {{ r['length_km'] }} км</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span>Длительность: {{ r['days']|ru_days }}</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="#i-cloud"/></svg><span>Сезон: {{ SEASONS[r['season']] }}</span></li>
+    </ul>
+  </div>
+  <span class="arrow-btn" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
+</li>

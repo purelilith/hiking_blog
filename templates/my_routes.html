@@ -2,6 +2,7 @@
 {% block title %}Мои маршруты{% endblock %}
 {% block content %}
   <h1>Мои маршруты</h1>
+  <p><a class="btn" href="{{ url_for('routes.create') }}">Новый маршрут</a></p>
   <ul class="route-list">
     {% for r in routes %}
       <li>

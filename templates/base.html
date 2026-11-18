@@ -3,40 +3,69 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Маршруты{% endblock %}</title>
+  <title>{% block title %}Пеший туризм по России{% endblock %} · Тропа</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
   {% block head %}{% endblock %}
 </head>
 <body>
+  {% include "_icons.html" %}
   <a class="skip-link" href="#content">Перейти к содержимому</a>
 
-  <header>
-    <nav aria-label="Основное меню">
-      <a href="{{ url_for('pages.index') }}">Главная</a>
-      <a href="{{ url_for('routes.catalog') }}">Каталог</a>
-      <a href="{{ url_for('routes.mine') }}">Мои маршруты</a>
-      <a href="{{ url_for('routes.create') }}">Новый маршрут</a>
-      <a href="{{ url_for('pages.about') }}">О проекте</a>
-      {% if g.user %}
-        <span>{{ g.user['username'] }}</span>
-        <a href="{{ url_for('auth.logout') }}">Выйти</a>
-      {% else %}
-        <a href="{{ url_for('auth.login') }}">Войти</a>
-        <a href="{{ url_for('auth.register') }}">Регистрация</a>
-      {% endif %}
+  {% set ep = request.endpoint %}
+  <header class="site-header">
+    <a class="logo" href="{{ url_for('pages.index') }}">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Тропа — на главную">
+    </a>
+
+    <nav class="main-nav" aria-label="Основное меню">
+      <a href="{{ url_for('pages.index') }}" {% if ep == 'pages.index' %}aria-current="page"{% endif %}>Главная</a>
+      <a href="{{ url_for('routes.catalog') }}" {% if ep == 'routes.catalog' %}aria-current="page"{% endif %}>Каталог</a>
+      <a href="{{ url_for('routes.mine') }}" {% if ep == 'routes.mine' %}aria-current="page"{% endif %}>Мои маршруты</a>
+      <a href="{{ url_for('pages.about') }}" {% if ep == 'pages.about' %}aria-current="page"{% endif %}>О проекте</a>
     </nav>
+
+    <div class="header-actions">
+      {% if g.user %}
+        <span class="user-name">{{ g.user['username'] }}</span>
+        <a class="btn" href="{{ url_for('auth.logout') }}">Выйти</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('auth.login') }}">Вход</a>
+      {% endif %}
+
+      <div class="settings">
+        <button type="button" class="settings-btn" id="settings-btn"
+                aria-expanded="false" aria-controls="settings-panel" aria-label="Настройки доступности">
+          <svg class="icon" aria-hidden="true"><use href="#i-gear"/></svg>
+        </button>
+        <div class="settings-panel" id="settings-panel" role="group" aria-label="Настройки доступности" hidden>
+          <p class="settings-title">Размер текста: <span id="size-label">обычный</span></p>
+          <div class="settings-row">
+            <button type="button" class="btn btn-small" data-size-step="-1">Меньше</button>
+            <button type="button" class="btn btn-small" data-size-step="1">Больше</button>
+          </div>
+          <label class="check"><input type="checkbox" id="contrast-toggle"> Высокий контраст</label>
+          <button type="button" class="btn btn-small" id="settings-reset">Сбросить</button>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <main id="content" tabindex="-1">
-    {% for message in get_flashed_messages() %}
-      <p class="message" role="alert">{{ message }}</p>
-    {% endfor %}
+  <main id="content" class="{% block main_class %}page{% endblock %}" tabindex="-1">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for message in messages %}<p class="message" role="alert">{{ message }}</p>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
     {% block content %}{% endblock %}
   </main>
 
-  <footer>
-    <p>Блог пеших маршрутов</p>
+  <footer class="site-footer">
+    <p>Тропа — блог пеших маршрутов по России</p>
   </footer>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>
