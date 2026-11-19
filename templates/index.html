@@ -4,20 +4,35 @@
 
 {% block content %}
   <section class="hero" aria-labelledby="hero-title">
-    <img class="hero-bg" src="{{ url_for('static', filename='img/hero.jpg') }}"
-         alt="Путешественник с рюкзаком и треккинговыми палками на горном склоне осенью"
-         fetchpriority="high">
-    <h1 class="hero-text" id="hero-title">
-      <span class="hero-small">Пеший туризм по</span>
-      <span class="hero-big"><span>России</span></span>
-    </h1>
+    <div class="hero-wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="hero-bg" src="{{ url_for('static', filename='img/hero.jpg') }}"
+           alt="Путешественник с рюкзаком и треккинговыми палками на горном склоне осенью"
+           fetchpriority="high">
+
+      <div class="hero-center">
+        <p class="hero-kicker">пеший туризм и маршруты</p>
+        <h1 class="hero-text" id="hero-title">
+          <span class="hero-big"><span>РОССИЯ</span></span>
+        </h1>
+      </div>
+
+      <div class="hero-bottom">
+        <p class="hero-lead">Проверенные тропы от Карелии до Байкала: GPS-треки, чек-лист снаряжения и паспорт доступности каждого маршрута.</p>
+        <a class="btn btn-hero" href="{{ url_for('routes.catalog') }}">
+          <span>Смотреть маршруты</span>
+          <span class="btn-circle" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
+        </a>
+      </div>
+    </section>
+  </div>
   </section>
 
   <section class="section" aria-labelledby="popular-title">
     <div class="section-head">
       <div>
         <h2 id="popular-title">Популярные маршруты</h2>
-        <p class="section-sub">Проверенные тропы с GPS-точками, сезонами и списком снаряжения</p>
+        <p class="section-sub">Проверенные тропы с треками, сезонами и списком снаряжения</p>
       </div>
       <a class="btn btn-wide" href="{{ url_for('routes.catalog') }}">
         <span>Весь каталог</span>
@@ -46,5 +61,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/home.js') }}?v=2" defer></script>
+  <script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
 {% endblock %}
