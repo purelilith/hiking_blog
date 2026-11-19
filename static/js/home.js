@@ -13,7 +13,7 @@
     }
   }
   if (document.fonts && document.fonts.load) {
-    document.fonts.load("100px Gehaks").then(fitHero, fitHero);
+    document.fonts.load("100px Manomakh").then(fitHero, fitHero);
   }
   window.addEventListener("load", fitHero);
   window.addEventListener("resize", fitHero);

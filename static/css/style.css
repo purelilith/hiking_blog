@@ -10,7 +10,7 @@
   font-family: "FindSansPro";
   src: url("../fonts/FindSansPro-Bold.woff2") format("woff2");
   font-weight: 700;
-  font-display: block;
+  font-display: block;  
 }
 
 :root {
@@ -260,7 +260,7 @@ html[data-theme="dark"] .logo img { filter: invert(1) brightness(1.1); }
   );
   z-index: 1;
   pointer-events: none;
-}
+} 
 .hero-center {
   position: absolute;
   z-index: 2;
