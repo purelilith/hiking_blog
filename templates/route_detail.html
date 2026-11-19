@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block main_class %}page detail{% endblock %}
 {% block title %}{{ route['title'] }}{% endblock %}
 {% block head %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -6,12 +7,18 @@
 
 {% block content %}
   <h1>{{ route['title'] }}</h1>
-  <p>Автор: {{ route['username'] }}. Регион: {{ route['region'] }}. {{ route['length_km'] }} км,
-     {{ route['days'] }} дн., сложность: {{ difficulty[route['difficulty']] }}.</p>
-  {% if not route['is_public'] %}<p>Приватный маршрут: его видите только вы.</p>{% endif %}
+  <ul class="chips">
+    <li>{{ route['region'] }}</li>
+    <li>{{ route['length_km'] }} км</li>
+    <li>{{ route['days']|ru_days }}</li>
+    <li>{{ difficulty[route['difficulty']] }}</li>
+    <li>Сезон: {{ SEASONS[route['season']] }}</li>
+  </ul>
+  <p class="byline">Автор: {{ route['username'] }}{% if not route['is_public'] %} · приватный маршрут, виден только вам{% endif %}</p>
+
   {% if g.user and g.user['id'] == route['author_id'] %}
-    <section aria-label="Управление маршрутом">
-      <a href="{{ url_for('routes.edit', route_id=route['id']) }}">Редактировать</a>
+    <section class="manage" aria-label="Управление маршрутом">
+      <a class="btn" href="{{ url_for('routes.edit', route_id=route['id']) }}">Редактировать</a>
       <form method="post" action="{{ url_for('routes.toggle_visibility', route_id=route['id']) }}">
         <button type="submit">{{ 'Сделать приватным' if route['is_public'] else 'Сделать публичным' }}</button>
       </form>
@@ -21,47 +28,52 @@
       </form>
     </section>
   {% endif %}
-  <h2>Описание</h2>
-  <p class="prewrap">{{ route['description'] }}</p>
 
-  <h2>Сроки, ограничения и источник</h2>
-  <dl>
-    <dt>Маршрут открыт</dt>
-    <dd>{% if route['open_from'] or route['open_to'] %}с {{ route['open_from'] or '—' }} по {{ route['open_to'] or '—' }}{% else %}даты не указаны{% endif %}</dd>
-    <dt>Ограничения</dt>
-    <dd>{{ route['restrictions'] or 'не указаны' }}</dd>
-    <dt>Источник</dt>
-    <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}</dd>
-    <dt>Данные собраны и проверены</dt>
-    <dd>{{ route['source_checked'] or 'дата не указана' }}</dd>
-  </dl>
-  <p>Перед выходом уточните актуальность информации на сайте источника.</p>
+  <img class="detail-photo" src="{{ route_image(route['id']) }}" alt="Фото маршрута: {{ route['title'] }}">
 
-  <h2>Доступность</h2>
-  <dl>
-    <dt>Покрытие</dt><dd>{{ route['surface'] or 'не указано' }}</dd>
-    <dt>Самый крутой подъём</dt><dd>{{ route['max_slope'] or 'не указан' }}</dd>
-    <dt>Ступеньки</dt><dd>{{ 'есть' if route['has_steps'] else 'нет' }}</dd>
-    <dt>Места отдыха</dt><dd>{{ route['rest_points'] or 'не указаны' }}</dd>
-  </dl>
+  <section class="card"><h2>Описание</h2><p class="prewrap">{{ route['description'] }}</p></section>
 
-  <h2>Карта</h2>
-  <div id="map" data-points='{{ points | tojson }}' aria-label="Карта маршрута"></div>
+  <section class="card">
+    <h2>Сроки, ограничения и источник</h2>
+    <dl>
+      <dt>Маршрут открыт</dt>
+      <dd>{% if route['open_from'] or route['open_to'] %}с {{ route['open_from'] or '—' }} по {{ route['open_to'] or '—' }}{% else %}даты не указаны{% endif %}</dd>
+      <dt>Ограничения</dt><dd>{{ route['restrictions'] or 'не указаны' }}</dd>
+      <dt>Источник</dt>
+      <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}</dd>
+      <dt>Данные собраны и проверены</dt><dd>{{ route['source_checked'] or 'дата не указана' }}</dd>
+    </dl>
+    <p>Перед выходом уточните актуальность информации на сайте источника.</p>
+  </section>
 
-  <h2>Маршрут по точкам (текстовая версия)</h2>
-  <ol>
-    {% for p in points %}
-      <li>Точка {{ loop.index }}: {{ '%.5f'|format(p[0]) }}, {{ '%.5f'|format(p[1]) }}</li>
+  <section class="card">
+    <h2>Доступность</h2>
+    <dl>
+      <dt>Покрытие</dt><dd>{{ route['surface'] or 'не указано' }}</dd>
+      <dt>Самый крутой подъём</dt><dd>{{ route['max_slope'] or 'не указан' }}</dd>
+      <dt>Ступеньки</dt><dd>{{ 'есть' if route['has_steps'] else 'нет' }}</dd>
+      <dt>Места отдыха</dt><dd>{{ route['rest_points'] or 'не указаны' }}</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2>Карта</h2>
+    <div id="map" data-points='{{ points | tojson }}' aria-label="Карта маршрута"></div>
+    <h3>Маршрут по точкам (текстовая версия)</h3>
+    <ol>
+      {% for p in points %}<li>Точка {{ loop.index }}: {{ '%.5f'|format(p[0]) }}, {{ '%.5f'|format(p[1]) }}</li>{% endfor %}
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Что взять с собой</h2>
+    {% for category, items in gear|groupby('category') %}
+      <h3>{{ category }}</h3>
+      <ul>{% for item in items %}<li>{{ item['name'] }}</li>{% endfor %}</ul>
+    {% else %}
+      <p>Для этого маршрута пока нет подобранного снаряжения.</p>
     {% endfor %}
-  </ol>
-
-  <h2>Что взять с собой</h2>
-  {% for category, items in gear|groupby('category') %}
-    <h3>{{ category }}</h3>
-    <ul>{% for item in items %}<li>{{ item['name'] }}</li>{% endfor %}</ul>
-  {% else %}
-    <p>Для этого маршрута пока нет подобранного снаряжения.</p>
-  {% endfor %}
+  </section>
 {% endblock %}
 
 {% block scripts %}

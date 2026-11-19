@@ -15,38 +15,35 @@
   {% set ep = request.endpoint %}
   <header class="site-header">
     <a class="logo" href="{{ url_for('pages.index') }}">
-      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Тропа — на главную">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="">
+      <span>Tropa</span>
     </a>
 
-    <nav class="main-nav" aria-label="Основное меню">
-      <a href="{{ url_for('pages.index') }}" {% if ep == 'pages.index' %}aria-current="page"{% endif %}>Главная</a>
-      <a href="{{ url_for('routes.catalog') }}" {% if ep == 'routes.catalog' %}aria-current="page"{% endif %}>Каталог</a>
-      <a href="{{ url_for('routes.mine') }}" {% if ep == 'routes.mine' %}aria-current="page"{% endif %}>Мои маршруты</a>
-      <a href="{{ url_for('pages.about') }}" {% if ep == 'pages.about' %}aria-current="page"{% endif %}>О проекте</a>
-    </nav>
-
-    <div class="header-actions">
+    <div class="header-center">
+      <nav class="main-nav" aria-label="Основное меню">
+        <a href="{{ url_for('pages.index') }}" {% if ep == 'pages.index' %}aria-current="page"{% endif %}>Главная</a>
+        <a href="{{ url_for('routes.catalog') }}" {% if ep == 'routes.catalog' %}aria-current="page"{% endif %}>Каталог</a>
+        <a href="{{ url_for('routes.mine') }}" {% if ep == 'routes.mine' %}aria-current="page"{% endif %}>Мои маршруты</a>
+        <a href="{{ url_for('pages.about') }}" {% if ep == 'pages.about' %}aria-current="page"{% endif %}>О проекте</a>
+      </nav>
       {% if g.user %}
         <span class="user-name">{{ g.user['username'] }}</span>
         <a class="btn" href="{{ url_for('auth.logout') }}">Выйти</a>
       {% else %}
         <a class="btn" href="{{ url_for('auth.login') }}">Вход</a>
       {% endif %}
+    </div>
 
-      <div class="settings">
-        <button type="button" class="settings-btn" id="settings-btn"
-                aria-expanded="false" aria-controls="settings-panel" aria-label="Настройки доступности">
-          <svg class="icon" aria-hidden="true"><use href="#i-gear"/></svg>
-        </button>
-        <div class="settings-panel" id="settings-panel" role="group" aria-label="Настройки доступности" hidden>
-          <p class="settings-title">Размер текста: <span id="size-label">обычный</span></p>
-          <div class="settings-row">
-            <button type="button" class="btn btn-small" data-size-step="-1">Меньше</button>
-            <button type="button" class="btn btn-small" data-size-step="1">Больше</button>
-          </div>
-          <label class="check"><input type="checkbox" id="contrast-toggle"> Высокий контраст</label>
-          <button type="button" class="btn btn-small" id="settings-reset">Сбросить</button>
-        </div>
+    <div class="settings">
+      <button type="button" class="settings-btn" id="settings-btn"
+              aria-expanded="false" aria-controls="settings-panel" aria-label="Настройки доступности">
+        <svg class="icon" aria-hidden="true"><use href="#i-gear"/></svg>
+      </button>
+      <div class="settings-panel" id="settings-panel" role="group" aria-label="Настройки доступности" hidden>
+        <label for="font-range">Размер текста: <output id="font-value" for="font-range">100%</output></label>
+        <input type="range" id="font-range" min="85" max="160" step="5" value="100">
+        <label class="check"><input type="checkbox" id="contrast-toggle"> Высокий контраст</label>
+        <button type="button" class="btn btn-small" id="settings-reset">Сбросить</button>
       </div>
     </div>
   </header>
@@ -63,7 +60,7 @@
   </main>
 
   <footer class="site-footer">
-    <p>Тропа — блог пеших маршрутов по России</p>
+    <p>Tropa — блог пеших маршрутов по России</p>
   </footer>
 
   {% block scripts %}{% endblock %}

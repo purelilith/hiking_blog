@@ -1,4 +1,20 @@
 (function () {
+  /* 1. Слово «РОССИИ» растягиваем ровно на всю ширину блока */
+  function fitHero() {
+    var outer = document.querySelector(".hero-big");
+    if (!outer) { return; }
+    var inner = outer.firstElementChild;
+    outer.style.fontSize = "100px";
+    var ratio = outer.clientWidth / inner.getBoundingClientRect().width;
+    outer.style.fontSize = (100 * ratio) + "px";
+  }
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load("100px Gehaks").then(fitHero, fitHero);
+  }
+  fitHero();
+  window.addEventListener("resize", fitHero);
+
+  /* 2. Кнопка «Смотреть ещё» */
   var btn = document.getElementById("load-more");
   var list = document.getElementById("popular-list");
   var status = document.getElementById("load-status");
