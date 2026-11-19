@@ -1,7 +1,10 @@
 <li class="route-card">
-  <img src="{{ route_image(r['id']) }}" alt="Фото маршрута: {{ r['title'] }}"
-       width="400" height="286" loading="lazy">
-  <div>
+  <div class="route-thumb">
+    <img src="{{ route_image(r['id']) }}" alt="Фото маршрута: {{ r['title'] }}"
+         width="400" height="286" loading="lazy">
+    <span class="diff-pill diff-{{ r['difficulty'] }}">{{ DIFFICULTY[r['difficulty']] }}</span>
+  </div>
+  <div class="route-body">
     <h3><a href="{{ url_for('routes.detail', route_id=r['id']) }}">{{ r['title'] }}</a></h3>
     <ul class="meta">
       <li><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><span>{{ r['region'] }}</span></li>

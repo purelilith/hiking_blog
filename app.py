@@ -1,7 +1,5 @@
 import os
-
 from flask import Flask, url_for
-
 import db
 
 
@@ -31,13 +29,19 @@ def create_app():
 
     def route_image(route_id):
         """Фото маршрута, если оно лежит в static/img/routes, иначе заглушка."""
-        rel = f"img/routes/{route_id}.jpg"
-        if os.path.exists(os.path.join(app.static_folder, rel)):
-            return url_for("static", filename=rel)
-        return url_for("static", filename="img/route-placeholder.jpg")
+        for ext in ("jpg", "jpeg", "png", "webp"):
+            rel = f"img/routes/{route_id}.{ext}"
+            if os.path.exists(os.path.join(app.static_folder, rel)):
+                return url_for("static", filename=rel)
+        return url_for("static", filename="img/route-placeholder.png")
 
     app.jinja_env.filters["ru_days"] = ru_days
-    app.jinja_env.globals.update(route_image=route_image, SEASONS=routes.SEASONS)
+    app.jinja_env.globals.update(
+        route_image=route_image,
+        SEASONS=routes.SEASONS,
+        DIFFICULTY=routes.DIFFICULTY,
+        TERRAINS=routes.TERRAINS,
+    )
     return app
 
 

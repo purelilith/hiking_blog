@@ -13,8 +13,9 @@
     <li>{{ route['days']|ru_days }}</li>
     <li>{{ difficulty[route['difficulty']] }}</li>
     <li>Сезон: {{ SEASONS[route['season']] }}</li>
+    <li>Местность: {{ TERRAINS[route['terrain']] }}</li>
   </ul>
-  <p class="byline">Автор: {{ route['username'] }}{% if not route['is_public'] %} · приватный маршрут, виден только вам{% endif %}</p>
+  <p class="byline">Автор: {{ route['username'] }} · Просмотров: {{ route['views'] }}{% if not route['is_public'] %} · приватный маршрут, виден только вам{% endif %}</p>
 
   {% if g.user and g.user['id'] == route['author_id'] %}
     <section class="manage" aria-label="Управление маршрутом">
@@ -37,17 +38,17 @@
     <h2>Сроки, ограничения и источник</h2>
     <dl>
       <dt>Маршрут открыт</dt>
-      <dd>{% if route['open_from'] or route['open_to'] %}с {{ route['open_from'] or '—' }} по {{ route['open_to'] or '—' }}{% else %}даты не указаны{% endif %}</dd>
+      <dd>{% if route['open_from'] or route['open_to'] %}с {{ route['open_from'] or '—' }} по {{ route['open_to'] or '—' }}{% else %}круглый год / даты не указаны{% endif %}</dd>
       <dt>Ограничения</dt><dd>{{ route['restrictions'] or 'не указаны' }}</dd>
       <dt>Источник</dt>
-      <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}</dd>
+      <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" target="_blank" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}</dd>
       <dt>Данные собраны и проверены</dt><dd>{{ route['source_checked'] or 'дата не указана' }}</dd>
     </dl>
-    <p>Перед выходом уточните актуальность информации на сайте источника.</p>
+    <p style="margin-top:1rem; color: var(--text-muted); font-size: .92rem;">Перед выходом уточните актуальность информации на сайте источника.</p>
   </section>
 
   <section class="card">
-    <h2>Доступность</h2>
+    <h2>Паспорт доступности</h2>
     <dl>
       <dt>Покрытие</dt><dd>{{ route['surface'] or 'не указано' }}</dd>
       <dt>Самый крутой подъём</dt><dd>{{ route['max_slope'] or 'не указан' }}</dd>
@@ -57,19 +58,29 @@
   </section>
 
   <section class="card">
-    <h2>Карта</h2>
+    <h2>Карта маршрута</h2>
     <div id="map" data-points='{{ points | tojson }}' aria-label="Карта маршрута"></div>
-    <h3>Маршрут по точкам (текстовая версия)</h3>
+    <h3 style="margin-top:1rem;">Маршрут по точкам</h3>
     <ol>
       {% for p in points %}<li>Точка {{ loop.index }}: {{ '%.5f'|format(p[0]) }}, {{ '%.5f'|format(p[1]) }}</li>{% endfor %}
     </ol>
   </section>
 
-  <section class="card">
-    <h2>Что взять с собой</h2>
+  <section class="card" id="gear-section" data-route-id="{{ route['id'] }}">
+    <h2>Чек-лист: что взять с собой</h2>
+    <p class="gear-progress" id="gear-progress" role="status"></p>
     {% for category, items in gear|groupby('category') %}
       <h3>{{ category }}</h3>
-      <ul>{% for item in items %}<li>{{ item['name'] }}</li>{% endfor %}</ul>
+      <ul style="list-style:none; padding-left:0;">
+        {% for item in items %}
+          <li>
+            <label class="gear-check">
+              <input type="checkbox" data-gear-name="{{ item['name'] }}">
+              <span>{{ item['name'] }}</span>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
     {% else %}
       <p>Для этого маршрута пока нет подобранного снаряжения.</p>
     {% endfor %}
@@ -78,5 +89,32 @@
 
 {% block scripts %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="{{ url_for('static', filename='js/route_map.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/route_map.js') }}?v=2"></script>
+  <script>
+    (function () {
+      var sec = document.getElementById("gear-section");
+      var prog = document.getElementById("gear-progress");
+      if (!sec || !prog) return;
+      var key = "gear_route_" + sec.dataset.routeId;
+      var checks = sec.querySelectorAll("input[type='checkbox']");
+      var saved = {};
+      try { saved = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) {}
+
+      function update() {
+        var done = 0;
+        checks.forEach(function (c) {
+          if (c.checked) done++;
+          saved[c.dataset.gearName] = c.checked;
+        });
+        prog.textContent = "Собрано: " + done + " из " + checks.length;
+        try { localStorage.setItem(key, JSON.stringify(saved)); } catch (e) {}
+      }
+
+      checks.forEach(function (c) {
+        if (saved[c.dataset.gearName]) c.checked = true;
+        c.addEventListener("change", update);
+      });
+      update();
+    })();
+  </script>
 {% endblock %}

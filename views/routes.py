@@ -5,7 +5,6 @@ from datetime import date
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from db import get_db
-import db
 from views.auth import login_required
 
 bp = Blueprint("routes", __name__, url_prefix="/routes")
@@ -14,6 +13,7 @@ DIFFICULTY = {"easy": "Лёгкий", "medium": "Средний", "hard": "Сл�
 SEASONS = {"any": "Любой", "summer": "Лето", "winter": "Зима", "spring_autumn": "Весна/осень"}
 TERRAINS = {"any": "Любая", "forest": "Лес", "mountain": "Горы", "city": "Город", "water": "Вода/берег"}
 PER_PAGE = 10
+
 
 def path_length_km(points):
     """Длина ломаной линии по точкам (формула гаверсинусов)."""
@@ -27,7 +27,6 @@ def path_length_km(points):
 
 
 def parse_points(raw):
-    """Превращает текст '[[lat, lon], ...]' в список; при ошибке возвращает None."""
     try:
         points = [(float(lat), float(lon)) for lat, lon in json.loads(raw)]
     except (ValueError, TypeError):
@@ -35,6 +34,7 @@ def parse_points(raw):
     if any(not (-90 <= lat <= 90 and -180 <= lon <= 180) for lat, lon in points):
         return None
     return points
+
 
 def valid_date(s):
     try:
@@ -45,7 +45,6 @@ def valid_date(s):
 
 
 def num(name):
-    """Число из адресной строки или None, если там не число."""
     try:
         return float(request.args.get(name, "").replace(",", "."))
     except ValueError:
@@ -69,7 +68,6 @@ UPDATE_SQL = """UPDATE routes SET title=:title, region=:region, length_km=:lengt
 
 
 def read_route_form(f):
-    """Проверяет форму. Возвращает (данные для базы, точки, текст ошибки или None)."""
     def opt(name):
         return f.get(name, "").strip() or None
 
@@ -129,13 +127,9 @@ def save_points(db, route_id, points):
 
 
 def get_own_route(route_id):
-    """Достаёт маршрут и проверяет, что он принадлежит вошедшему пользователю."""
     route = get_db().execute("SELECT * FROM routes WHERE id = ?", (route_id,)).fetchone()
     if route is None:
         abort(404)
-    if g.user is None or g.user["id"] != route["author_id"]:
-        db.execute("UPDATE routes SET views = views + 1 WHERE id = ?", (route_id,))
-        db.commit()
     if route["author_id"] != g.user["id"]:
         abort(403)
     return route
@@ -205,6 +199,7 @@ def delete(route_id):
     flash("Маршрут удалён.")
     return redirect(url_for("routes.mine"))
 
+
 @bp.route("/")
 def catalog():
     where = ["(r.is_public = 1 OR r.author_id = ?)"]
@@ -217,6 +212,9 @@ def catalog():
     if a.get("difficulty") in DIFFICULTY:
         where.append("r.difficulty = ?")
         params.append(a["difficulty"])
+    if a.get("season") in SEASONS and a["season"] != "any":
+        where.append("r.season IN (?, 'any')")
+        params.append(a["season"])
     if a.get("terrain") in TERRAINS and a["terrain"] != "any":
         where.append("r.terrain IN (?, 'any')")
         params.append(a["terrain"])
@@ -232,6 +230,14 @@ def catalog():
     if a.get("no_steps"):
         where.append("r.has_steps = 0")
 
+    order_map = {
+        "new": "r.created_at DESC, r.id DESC",
+        "popular": "r.views DESC, r.id DESC",
+        "short": "r.length_km ASC, r.id DESC",
+        "long": "r.length_km DESC, r.id DESC",
+    }
+    order_sql = order_map.get(a.get("sort", "new"), order_map["new"])
+
     try:
         page = max(1, int(a.get("page", "1")))
     except ValueError:
@@ -245,7 +251,7 @@ def catalog():
 
     routes = db.execute(
         "SELECT r.* FROM routes r WHERE " + where_sql +
-        " ORDER BY r.created_at DESC, r.id DESC LIMIT ? OFFSET ?",
+        f" ORDER BY {order_sql} LIMIT ? OFFSET ?",
         params + [PER_PAGE, (page - 1) * PER_PAGE],
     ).fetchall()
 
@@ -263,6 +269,10 @@ def detail(route_id):
     ).fetchone()
     if route is None or (not route["is_public"] and (g.user is None or g.user["id"] != route["author_id"])):
         abort(404)
+
+    if g.user is None or g.user["id"] != route["author_id"]:
+        db.execute("UPDATE routes SET views = views + 1 WHERE id = ?", (route_id,))
+        db.commit()
 
     points = [[p["lat"], p["lon"]] for p in db.execute(
         "SELECT lat, lon FROM route_points WHERE route_id = ? ORDER BY position", (route_id,))]

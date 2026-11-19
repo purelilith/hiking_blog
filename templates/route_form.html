@@ -14,7 +14,7 @@
     </select>
   {% endmacro %}
   <h1>{{ 'Редактирование маршрута' if editing else 'Новый маршрут' }}</h1>
-  <form method="post">
+  <form method="post" class="card">
     <label for="title">Название</label>
     <input id="title" name="title" type="text" required maxlength="120" value="{{ form.get('title', '') }}">
 
@@ -39,11 +39,15 @@
       <input id="max_slope" name="max_slope" type="text" value="{{ form.get('max_slope', '') }}">
       <label for="rest_points">Места отдыха (скамейки, навесы)</label>
       <input id="rest_points" name="rest_points" type="text" value="{{ form.get('rest_points', '') }}">
-      <label><input name="is_public" type="checkbox" {% if form.get('is_public') %}checked{% endif %}> Сделать маршрут публичным (если снять галочку, его увидите только вы)</label>
+      <label class="check" style="margin-top:1rem;"><input name="has_steps" type="checkbox" {% if form.get('has_steps') %}checked{% endif %}> На маршруте есть ступеньки</label>
     </fieldset>
 
     <fieldset>
       <legend>Ограничения и источник</legend>
+      <label for="restrictions">Ограничения (пропуска, заповедная зона и т.д.)</label>
+      <input id="restrictions" name="restrictions" type="text" value="{{ form.get('restrictions', '') }}">
+      <label for="source_url">Ссылка на официальный источник (https://...)</label>
+      <input id="source_url" name="source_url" type="url" value="{{ form.get('source_url', '') }}">
       <label for="open_from">Маршрут открыт с</label>
       <input id="open_from" name="open_from" type="date" value="{{ form.get('open_from', '') }}">
       <label for="open_to">Маршрут открыт по</label>
@@ -54,28 +58,35 @@
 
     <fieldset>
       <legend>Маршрут на карте</legend>
-      <p>Щёлкайте по карте, чтобы ставить точки по порядку, или введите координаты вручную. Длина посчитается автоматически.</p>
+      <p>Щёлкайте по карте, чтобы ставить точки по порядку, или введите координаты вручную.</p>
+      <p id="live-distance" style="font-weight:700; color:var(--accent);"></p>
       <div id="map" aria-label="Карта для расстановки точек маршрута"></div>
 
       <label for="lat-input">Широта</label>
       <input id="lat-input" type="text" inputmode="decimal">
       <label for="lon-input">Долгота</label>
       <input id="lon-input" type="text" inputmode="decimal">
-      <button type="button" id="add-point">Добавить точку</button>
-      <button type="button" id="undo-point">Удалить последнюю</button>
-      <button type="button" id="clear-points">Очистить</button>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.75rem;">
+        <button type="button" class="btn btn-small" id="add-point">Добавить точку</button>
+        <button type="button" class="btn btn-small" id="undo-point">Удалить последнюю</button>
+        <button type="button" class="btn btn-small" id="clear-points">Очистить</button>
+      </div>
       <p id="point-status" role="status"></p>
 
       <h2>Точки маршрута</h2>
       <ol id="points-list"></ol>
       <input type="hidden" id="points" name="points" value="{{ form.get('points', '[]') }}">
     </fieldset>
-    <label><input name="is_public" type="checkbox" checked> Сделать маршрут публичным (если снять галочку, его увидите только вы)</label>
+
+    <label class="check" style="margin-top:1.25rem;">
+      <input name="is_public" type="checkbox" {% if form.get('is_public') %}checked{% endif %}>
+      Сделать маршрут публичным (если снять галочку, его увидите только вы)
+    </label>
     <button type="submit">Сохранить маршрут</button>
   </form>
 {% endblock %}
 
 {% block scripts %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/map.js') }}?v=2"></script>
 {% endblock %}

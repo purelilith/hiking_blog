@@ -4,20 +4,25 @@
 
 {% block content %}
   <section class="hero" aria-labelledby="hero-title">
-    <img src="{{ url_for('static', filename='img/hero.jpg') }}"
+    <img class="hero-bg" src="{{ url_for('static', filename='img/hero.jpg') }}"
          alt="Путешественник с рюкзаком и треккинговыми палками на горном склоне осенью"
          fetchpriority="high">
-    <h1 id="hero-title">
+    <h1 class="hero-text" id="hero-title">
       <span class="hero-small">Пеший туризм по</span>
-      <span class="hero-big">России</span>
+      <span class="hero-big"><span>России</span></span>
     </h1>
   </section>
 
   <section class="section" aria-labelledby="popular-title">
     <div class="section-head">
-      <h2 id="popular-title">Популярные маршруты</h2>
-      <a class="btn" href="{{ url_for('routes.catalog') }}">Весь каталог
-        <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <div>
+        <h2 id="popular-title">Популярные маршруты</h2>
+        <p class="section-sub">Проверенные тропы с GPS-точками, сезонами и списком снаряжения</p>
+      </div>
+      <a class="btn btn-wide" href="{{ url_for('routes.catalog') }}">
+        <span>Весь каталог</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+      </a>
     </div>
 
     {% if routes %}
@@ -32,11 +37,14 @@
         </p>
       {% endif %}
     {% else %}
-      <p>Публичных маршрутов пока нет. <a href="{{ url_for('routes.create') }}">Добавить первый</a>.</p>
+      <div class="empty card">
+        <p>Публичных маршрутов пока нет.</p>
+        <a class="btn btn-primary" href="{{ url_for('routes.create') }}">Добавить первый маршрут</a>
+      </div>
     {% endif %}
   </section>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/home.js') }}?v=2" defer></script>
 {% endblock %}

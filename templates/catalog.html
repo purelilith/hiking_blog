@@ -6,7 +6,7 @@
     <div class="field">
       <label for="{{ name }}">{{ label }}</label>
       <select id="{{ name }}" name="{{ name }}">
-        <option value="">Любая</option>
+        <option value="">Любой</option>
         {% for key, text in options.items() if key != 'any' %}
           <option value="{{ key }}" {% if args.get(name) == key %}selected{% endif %}>{{ text }}</option>
         {% endfor %}
@@ -18,8 +18,9 @@
   <form class="card filters" method="get" aria-label="Фильтры маршрутов" style="max-width:none">
     <div class="filters-grid">
       <div class="field"><label for="region">Регион</label>
-        <input id="region" name="region" type="text" value="{{ args.get('region', '') }}"></div>
+        <input id="region" name="region" type="text" placeholder="Например, Карелия" value="{{ args.get('region', '') }}"></div>
       {{ select("difficulty", "Сложность", difficulty) }}
+      {{ select("season", "Сезон", SEASONS) }}
       {{ select("terrain", "Тип местности", terrains) }}
       <div class="field"><label for="min_km">Длина от, км</label>
         <input id="min_km" name="min_km" type="number" min="0" step="any" value="{{ args.get('min_km', '') }}"></div>
@@ -27,15 +28,23 @@
         <input id="max_km" name="max_km" type="number" min="0" step="any" value="{{ args.get('max_km', '') }}"></div>
       <div class="field"><label for="days">Дней в пути</label>
         <input id="days" name="days" type="number" min="1" max="30" value="{{ args.get('days', '') }}"></div>
+      <div class="field"><label for="sort">Сортировка</label>
+        <select id="sort" name="sort">
+          <option value="new" {% if args.get('sort', 'new') == 'new' %}selected{% endif %}>Сначала новые</option>
+          <option value="popular" {% if args.get('sort') == 'popular' %}selected{% endif %}>По популярности</option>
+          <option value="short" {% if args.get('sort') == 'short' %}selected{% endif %}>Сначала короче</option>
+          <option value="long" {% if args.get('sort') == 'long' %}selected{% endif %}>Сначала длиннее</option>
+        </select>
+      </div>
     </div>
     <div class="filters-actions">
       <label class="check"><input name="no_steps" type="checkbox" {% if args.get('no_steps') %}checked{% endif %}> Без ступенек</label>
       <button type="submit">Найти</button>
-      <a href="{{ url_for('routes.catalog') }}">Сбросить</a>
+      <a class="btn btn-small" href="{{ url_for('routes.catalog') }}">Сбросить</a>
     </div>
   </form>
 
-  <p role="status">Найдено маршрутов: {{ total }}</p>
+  <p role="status" style="margin-top:1.25rem;">Найдено маршрутов: <strong>{{ total }}</strong></p>
   <ul class="route-list">
     {% for r in routes %}{% include "_route_card.html" %}
     {% else %}<li class="empty card">Ничего не найдено. Попробуйте изменить фильтры.</li>
