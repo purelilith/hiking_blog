@@ -511,7 +511,7 @@ h1, h2, h3, h4,
 }
 
 .hero-lead {
-  font-family: "Panama", serif;
-  font-size: clamp(1.05rem, 1.55cqw, 1.3rem); /* было clamp(.9rem, 1.25cqw, 1.05rem) */
-  max-width: 38rem; /* чуть расширили блок, чтобы крупный текст красиво укладывался в 2–3 строки */
+  font-family: var(--font); 
+  font-size: clamp(1rem, 1.35cqw, 1.15rem);
+  max-width: 36rem;
 }
