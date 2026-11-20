@@ -3,13 +3,19 @@
 {% block content %}
   <h1>Вход</h1>
   <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     <label for="username">Имя</label>
-    <input id="username" name="username" type="text" required autocomplete="username">
+    <input id="username" name="username" type="text" required maxlength="32" autocomplete="username">
 
     <label for="password">Пароль</label>
-    <input id="password" name="password" type="password" required autocomplete="current-password">
+    <input id="password" name="password" type="password" required maxlength="128" autocomplete="current-password">
 
     <button type="submit">Войти</button>
   </form>
+
+  {% if google_enabled %}
+    <p><a class="btn" href="{{ url_for('auth.google_login', next=next) }}">Войти через Google</a></p>
+  {% endif %}
   <p><a href="{{ url_for('auth.register') }}">Нет аккаунта? Регистрация</a></p>
 {% endblock %}

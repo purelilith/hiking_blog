@@ -3,12 +3,25 @@
 {% block content %}
   <h1>Регистрация</h1>
   <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="username">Имя</label>
-    <input id="username" name="username" type="text" required autocomplete="username">
+    <input id="username" name="username" type="text" required minlength="3" maxlength="32"
+           pattern="[\w.\-]{3,32}" autocomplete="username" aria-describedby="username-hint">
+    <p id="username-hint" class="section-sub">3–32 символа: буквы, цифры, точка, дефис, подчёркивание.</p>
 
     <label for="password">Пароль</label>
-    <input id="password" name="password" type="password" required autocomplete="new-password">
+    <input id="password" name="password" type="password" required minlength="10" maxlength="128"
+           autocomplete="new-password" aria-describedby="password-hint">
+    <p id="password-hint" class="section-sub">Не короче 10 символов, не самый простой.</p>
+
+    <label for="password2">Повторите пароль</label>
+    <input id="password2" name="password2" type="password" required minlength="10" maxlength="128" autocomplete="new-password">
 
     <button type="submit">Зарегистрироваться</button>
   </form>
+
+  {% if google_enabled %}
+    <p><a class="btn" href="{{ url_for('auth.google_login') }}">Продолжить через Google</a></p>
+  {% endif %}
+  <p><a href="{{ url_for('auth.login') }}">Уже есть аккаунт? Войти</a></p>
 {% endblock %}

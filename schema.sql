@@ -6,9 +6,12 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT NOT NULL,          -- '' для аккаунтов, созданных через Google
+    email         TEXT,
+    google_sub    TEXT UNIQUE,
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE UNIQUE INDEX idx_users_username_nocase ON users(username COLLATE NOCASE);
 
 CREATE TABLE routes (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,

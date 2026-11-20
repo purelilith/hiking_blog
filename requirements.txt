@@ -1,1 +1,6 @@
 Flask
+Flask-WTF
+Flask-Limiter
+Authlib
+requests
+python-dotenv
