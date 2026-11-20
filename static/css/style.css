@@ -221,9 +221,10 @@ html[data-theme="dark"] .logo img { filter: invert(1) brightness(1.1); }
 
 /* Главная: Скруглённый Hero-баннер с отступами по краям */
 .hero-wrap {
-  max-width: 92rem;
-  margin: .25rem auto 0;
-  padding: 0 var(--pad);
+  width: 100%;
+  margin: .25rem 0 0;
+  padding: 0 max(var(--pad), calc((100% - 92rem) / 2));
+  background: var(--accent);
 }
 .hero {
   position: relative;
@@ -265,12 +266,12 @@ html[data-theme="dark"] .logo img { filter: invert(1) brightness(1.1); }
   z-index: 2;
   left: 6%;
   right: 6%;
-  top: 13%;
+  top: 22%; 
   text-align: center;
   color: #ffffff;
 }
 .hero-kicker {
-  margin: 0 0 .4cqw;
+  margin: 0 0 .1cqw;
   font-size: clamp(.95rem, 1.55cqw, 1.35rem);
   font-weight: 400;
   letter-spacing: .04em;
