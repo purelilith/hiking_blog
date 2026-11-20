@@ -1,6 +1,7 @@
 import os
 from flask import Flask, url_for
 import db
+from extensions import csrf, limiter, oauth
 
 
 def ru_days(n):
@@ -21,6 +22,34 @@ def create_app():
     app = Flask(__name__)
     app.config.from_pyfile("config.py")
     db.init_app(app)
+    csrf.init_app(app)
+    limiter.init_app(app)
+    oauth.init_app(app)
+    if app.config.get("GOOGLE_CLIENT_ID") and app.config.get("GOOGLE_CLIENT_SECRET"):
+        oauth.register(
+            name="google",
+            client_id=app.config["GOOGLE_CLIENT_ID"],
+            client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile"},
+        )
+    with app.app_context():
+        db.ensure_schema()
+
+    @app.context_processor
+    def inject_auth():
+        return {"google_enabled": bool(app.config.get("GOOGLE_CLIENT_ID")
+                                       and app.config.get("GOOGLE_CLIENT_SECRET"))}
+
+    @app.after_request
+    def security_headers(resp):
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        resp.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+        if app.config.get("SESSION_COOKIE_SECURE"):
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        return resp
 
     from views import auth, pages, routes
     app.register_blueprint(auth.bp)
@@ -48,4 +77,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
