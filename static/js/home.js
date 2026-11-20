@@ -1,6 +1,7 @@
 (function () {
   /* 1. Растягиваем «РОССИИ» на всю ширину текстового блока */
   function fitHero() {
+    var stage = document.querySelector(".hero");
     var outer = document.querySelector(".hero-big");
     if (!outer) return;
     var inner = outer.firstElementChild;
@@ -11,13 +12,21 @@
       var ratio = outer.clientWidth / innerW;
       outer.style.fontSize = (100 * ratio) + "px";
     }
+    if (stage) stage.classList.add("is-fit");
   }
+  /* Считаем размер, когда шрифт Gehaks реально загружен
+     (раньше ждали несуществующий Manomakh и мерили запасным шрифтом) */
   if (document.fonts && document.fonts.load) {
-    document.fonts.load("100px Manomakh").then(fitHero, fitHero);
+    document.fonts.load('100px "Gehaks"', "Россия").then(fitHero, fitHero);
+    document.fonts.ready.then(fitHero);
+  } else {
+    window.addEventListener("load", fitHero);
   }
-  window.addEventListener("load", fitHero);
   window.addEventListener("resize", fitHero);
-  fitHero();
+  setTimeout(function () {  /* страховка: текст не должен остаться скрытым */
+    var st = document.querySelector(".hero");
+    if (st) st.classList.add("is-fit");
+  }, 1500);
 
   /* 2. Кнопка «Смотреть ещё» */
   var btn = document.getElementById("load-more");

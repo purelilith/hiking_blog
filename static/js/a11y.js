@@ -1,5 +1,6 @@
 (function () {
   var root = document.documentElement;
+  root.classList.add("js");
   var DEFAULTS = { size: 100, contrast: "normal", theme: "light" };
   var state = Object.assign({}, DEFAULTS);
 

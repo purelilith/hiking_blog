@@ -4,13 +4,13 @@
   font-family: "FindSansPro";
   src: url("../fonts/FindSansPro-Regular.woff2") format("woff2");
   font-weight: 400;
-  font-display: block;
+  font-display: swap;
 }
 @font-face {
   font-family: "FindSansPro";
   src: url("../fonts/FindSansPro-Bold.woff2") format("woff2");
   font-weight: 700;
-  font-display: block;  
+  font-display: swap;
 }
 
 :root {
@@ -147,8 +147,7 @@ form button[type="submit"]:hover { background: var(--accent-hover); transform: t
 }
 .logo {
   display: inline-flex; align-items: center; gap: .55rem;
-  padding: .35rem .9rem .35rem .55rem; border-radius: 999px;
-  background: var(--card); border: 1px solid var(--border-subtle);
+  padding: .35rem 0; background: none; border: 0;
   color: var(--text); text-decoration: none; font-weight: 700; font-size: .95rem;
 }
 .logo img { display: block; height: 1.85rem; width: auto; }
@@ -293,6 +292,9 @@ html[data-theme="dark"] .logo img { filter: invert(1) brightness(1.1); }
   white-space: nowrap;
 }
 .hero-big > span { display: inline-block; }
+/* пока JS не подогнал размер под загруженный шрифт — прячем, чтобы не мигало */
+html.js .hero:not(.is-fit) .hero-big { opacity: 0; }
+.hero-big { transition: opacity .15s ease; }
 
 .hero-bottom {
   position: absolute;

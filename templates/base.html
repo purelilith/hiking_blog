@@ -4,7 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Пеший туризм по России{% endblock %} · Тропа</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+  <link rel="preload" href="{{ url_for('static', filename='fonts/Gehaks.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/FindSansPro-Bold.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/FindSansPro-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
   <script src="{{ url_for('static', filename='js/a11y.js') }}?v=2"></script>
   {% block head %}{% endblock %}
 </head>
@@ -29,7 +32,6 @@
 
       <div class="header-actions">
         {% if g.user %}
-          <a class="btn btn-primary btn-small" href="{{ url_for('routes.create') }}">+ Маршрут</a>
           <span class="user-name">{{ g.user['username'] }}</span>
           <a class="btn btn-small" href="{{ url_for('auth.logout') }}">Выйти</a>
         {% else %}
