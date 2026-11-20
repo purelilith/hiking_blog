@@ -1,17 +1,5 @@
 @font-face { font-family: "Panama"; src: url("../fonts/Panama.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Gehaks"; src: url("../fonts/Gehaks.woff2") format("woff2"); font-display: swap; }
-@font-face {
-  font-family: "FindSansPro";
-  src: url("../fonts/FindSansPro-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "FindSansPro";
-  src: url("../fonts/FindSansPro-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-display: swap;
-}
 
 :root {
   --bg: #ffffff;
@@ -30,7 +18,7 @@
   --shadow-hover: 0 16px 38px rgba(28, 34, 24, 0.1);
   --focus: #2e6fd8;
   --pad: clamp(1rem, 3.5vw, 3.25rem);
-  --font: "FindSansPro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 html[data-theme="dark"] {
@@ -315,6 +303,7 @@ html.js .hero:not(.is-fit) .hero-big { opacity: 0; }
   color: rgba(255, 255, 255, 0.94);
   font-size: clamp(.9rem, 1.25cqw, 1.05rem);
   line-height: 1.45;
+  font-family: var(--font);
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
 .btn-hero {
@@ -484,3 +473,45 @@ dd { margin: .2rem 0 0; }
 .footer-inner { max-width: 92rem; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 2rem; }
 .site-footer p { margin: 0; }
 .footer-note { color: var(--text-muted); font-size: .92rem; }
+
+/* Единая типографика на Inter: заголовки жирные (700), текст регулярный (400) */
+body,
+input,
+select,
+textarea,
+button {
+  font-family: var(--font);
+  font-weight: 400;
+}
+
+h1, h2, h3, h4,
+.section-head h1,
+.section-head h2,
+.page h1,
+.wide h1,
+.page h2,
+.wide h2,
+.route-card h3 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.prewrap,
+.detail .card p,
+.detail dd,
+.page p,
+.page li {
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.hero-kicker {
+  font-family: "Panama", serif;
+  font-size: clamp(1.15rem, 2.1cqw, 1.75rem); /* было clamp(.95rem, 1.55cqw, 1.35rem) */
+}
+
+.hero-lead {
+  font-family: "Panama", serif;
+  font-size: clamp(1.05rem, 1.55cqw, 1.3rem); /* было clamp(.9rem, 1.25cqw, 1.05rem) */
+  max-width: 38rem; /* чуть расширили блок, чтобы крупный текст красиво укладывался в 2–3 строки */
+}
