@@ -1,5 +1,6 @@
 import os
-from flask import Flask, url_for
+from flask import Flask, flash, redirect, request, url_for
+from werkzeug.exceptions import RequestEntityTooLarge
 import db
 from extensions import csrf, limiter, oauth
 
@@ -50,6 +51,11 @@ def create_app():
         if app.config.get("SESSION_COOKIE_SECURE"):
             resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
         return resp
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_large_file(_err):
+        flash("Файл слишком большой. Максимальный размер фото — 5 МБ.")
+        return redirect(request.referrer or url_for("routes.mine"))
 
     from views import auth, pages, routes
     app.register_blueprint(auth.bp)

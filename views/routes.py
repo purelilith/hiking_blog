@@ -1,8 +1,11 @@
 import json
 import math
+import os
 from datetime import date
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+from flask import (Blueprint, abort, current_app, flash, g, redirect,
+                   render_template, request, url_for)
+from werkzeug.utils import secure_filename
 
 from db import get_db
 from views.auth import login_required
@@ -13,6 +16,13 @@ DIFFICULTY = {"easy": "Лёгкий", "medium": "Средний", "hard": "Сл�
 SEASONS = {"any": "Любой", "summer": "Лето", "winter": "Зима", "spring_autumn": "Весна/осень"}
 TERRAINS = {"any": "Любая", "forest": "Лес", "mountain": "Горы", "city": "Город", "water": "Вода/берег"}
 PER_PAGE = 10
+
+ALLOWED_EXTENSIONS = {
+    "jpg": "jpg",
+    "jpeg": "jpg",
+    "png": "png",
+    "webp": "webp",
+}
 
 
 def path_length_km(points):
@@ -49,6 +59,64 @@ def num(name):
         return float(request.args.get(name, "").replace(",", "."))
     except ValueError:
         return None
+
+
+def _routes_img_dir():
+    folder = current_app.config.get("ROUTE_UPLOAD_FOLDER") or os.path.join(
+        current_app.static_folder, "img", "routes"
+    )
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _remove_route_images(route_id):
+    folder = _routes_img_dir()
+    for fname in os.listdir(folder):
+        stem, _ = os.path.splitext(fname)
+        if stem == str(route_id):
+            try:
+                os.remove(os.path.join(folder, fname))
+            except OSError:
+                pass
+
+
+def _detect_image_ext(file_storage):
+    """Проверяет расширение и сигнатуру содержимого файла (JPEG, PNG, WEBP)."""
+    if not file_storage or not file_storage.filename:
+        return None, None
+
+    _, raw_ext = os.path.splitext(file_storage.filename)
+    ext = raw_ext.lstrip(".").lower()
+    if not ext:
+        return None, "Не удалось определить формат файла."
+    if ext not in ALLOWED_EXTENSIONS:
+        return None, "Разрешены только изображения JPG, JPEG, PNG или WEBP."
+
+    stream = file_storage.stream
+    pos = stream.tell()
+    header = stream.read(16)
+    stream.seek(pos)
+
+    is_jpeg = header.startswith(b"\xff\xd8\xff")
+    is_png = header.startswith(b"\x89PNG\r\n\x1a\n")
+    is_webp = len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WEBP"
+
+    if not (is_jpeg or is_png or is_webp):
+        return None, "Файл повреждён или не является корректным изображением."
+
+    return ALLOWED_EXTENSIONS[ext], None
+
+def save_route_photo(route_id, file_storage, remove_existing=False):
+    if remove_existing:
+        _remove_route_images(route_id)
+    if file_storage and file_storage.filename:
+        ext, error = _detect_image_ext(file_storage)
+        if error:
+            return error
+        _remove_route_images(route_id)
+        target = os.path.join(_routes_img_dir(), f"{route_id}.{ext}")
+        file_storage.save(target)
+    return None
 
 
 INSERT_SQL = """INSERT INTO routes
@@ -140,16 +208,29 @@ def get_own_route(route_id):
 def create():
     if request.method == "POST":
         data, points, error = read_route_form(request.form)
+        photo = request.files.get("photo")
+        if error is None and photo and photo.filename:
+            _, photo_error = _detect_image_ext(photo)
+            if photo_error:
+                error = photo_error
+
         if error is None:
             db = get_db()
             cur = db.execute(INSERT_SQL, {**data, "author_id": g.user["id"]})
-            save_points(db, cur.lastrowid, points)
-            db.commit()
-            flash("Маршрут сохранён.")
-            return redirect(url_for("routes.detail", route_id=cur.lastrowid))
-        flash(error)
+            route_id = cur.lastrowid
+            save_points(db, route_id, points)
+            photo_err = save_route_photo(route_id, photo)
+            if photo_err:
+                db.rollback()
+                flash(photo_err)
+            else:
+                db.commit()
+                flash("Маршрут сохранён.")
+                return redirect(url_for("routes.detail", route_id=route_id))
+        else:
+            flash(error)
     form = request.form if request.method == "POST" else {"is_public": 1}
-    return render_template("route_form.html", form=form, editing=False,
+    return render_template("route_form.html", form=form, editing=False, route_id=None,
                            difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
 
 
@@ -160,20 +241,33 @@ def edit(route_id):
     db = get_db()
     if request.method == "POST":
         data, points, error = read_route_form(request.form)
+        photo = request.files.get("photo")
+        remove_photo = bool(request.form.get("remove_photo"))
+        if error is None and photo and photo.filename:
+            _, photo_error = _detect_image_ext(photo)
+            if photo_error:
+                error = photo_error
+
         if error is None:
             db.execute(UPDATE_SQL, {**data, "id": route_id, "author_id": g.user["id"]})
             db.execute("DELETE FROM route_points WHERE route_id = ?", (route_id,))
             save_points(db, route_id, points)
-            db.commit()
-            flash("Изменения сохранены.")
-            return redirect(url_for("routes.detail", route_id=route_id))
-        flash(error)
+            photo_err = save_route_photo(route_id, photo, remove_existing=remove_photo)
+            if photo_err:
+                db.rollback()
+                flash(photo_err)
+            else:
+                db.commit()
+                flash("Изменения сохранены.")
+                return redirect(url_for("routes.detail", route_id=route_id))
+        else:
+            flash(error)
         form = request.form
     else:
         points = [[p["lat"], p["lon"]] for p in db.execute(
             "SELECT lat, lon FROM route_points WHERE route_id = ? ORDER BY position", (route_id,))]
         form = {**dict(route), "points": json.dumps(points)}
-    return render_template("route_form.html", form=form, editing=True,
+    return render_template("route_form.html", form=form, editing=True, route_id=route_id,
                            difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
 
 
@@ -196,6 +290,7 @@ def delete(route_id):
     db = get_db()
     db.execute("DELETE FROM routes WHERE id = ? AND author_id = ?", (route_id, g.user["id"]))
     db.commit()
+    _remove_route_images(route_id)
     flash("Маршрут удалён.")
     return redirect(url_for("routes.mine"))
 

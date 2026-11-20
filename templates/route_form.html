@@ -14,7 +14,8 @@
     </select>
   {% endmacro %}
   <h1>{{ 'Редактирование маршрута' if editing else 'Новый маршрут' }}</h1>
-  <form method="post" class="card">
+  <form method="post" enctype="multipart/form-data" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="title">Название</label>
     <input id="title" name="title" type="text" required maxlength="120" value="{{ form.get('title', '') }}">
 
@@ -27,6 +28,27 @@
     {{ select("difficulty", "Сложность", difficulty) }}
     {{ select("season", "Лучший сезон", seasons) }}
     {{ select("terrain", "Тип местности", terrains) }}
+
+    <fieldset>
+      <legend>Фотография маршрута</legend>
+      {% if editing and route_id %}
+        <div id="current-photo-wrap" style="margin-bottom:.75rem;">
+          <img id="photo-preview" src="{{ route_image(route_id) }}"
+               alt="Текущее фото маршрута"
+               style="display:block; max-width:100%; max-height:16rem; border-radius:1rem; object-fit:cover;">
+        </div>
+        <label class="check" style="margin-bottom:.75rem;">
+          <input id="remove-photo" name="remove_photo" type="checkbox" {% if form.get('remove_photo') %}checked{% endif %}>
+          Удалить текущее фото (вернуть заглушку)
+        </label>
+      {% else %}
+        <img id="photo-preview" src="" alt="Предпросмотр фото маршрута" hidden
+             style="display:block; max-width:100%; max-height:16rem; border-radius:1rem; object-fit:cover; margin-bottom:.75rem;">
+      {% endif %}
+
+      <label for="photo">{{ 'Заменить фото (JPG, PNG, WEBP, до 5 МБ)' if editing else 'Фото маршрута (JPG, PNG, WEBP, до 5 МБ)' }}</label>
+      <input id="photo" name="photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+    </fieldset>
 
     <label for="description">Описание (расскажите о маршруте как путешественник путешественникам)</label>
     <textarea id="description" name="description" rows="8" required>{{ form.get('description', '') }}</textarea>
@@ -89,4 +111,37 @@
 {% block scripts %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="{{ url_for('static', filename='js/map.js') }}?v=2"></script>
+  <script>
+    (function () {
+      var input = document.getElementById("photo");
+      var preview = document.getElementById("photo-preview");
+      var removeCheck = document.getElementById("remove-photo");
+      if (!input || !preview) return;
+
+      var initialSrc = preview.getAttribute("src") || "";
+      var objectUrl = null;
+
+      input.addEventListener("change", function () {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+        var file = input.files && input.files[0];
+        if (!file) {
+          if (initialSrc) {
+            preview.src = initialSrc;
+            preview.hidden = false;
+          } else {
+            preview.removeAttribute("src");
+            preview.hidden = true;
+          }
+          return;
+        }
+        objectUrl = URL.createObjectURL(file);
+        preview.src = objectUrl;
+        preview.hidden = false;
+        if (removeCheck) removeCheck.checked = false;
+      });
+    })();
+  </script>
 {% endblock %}

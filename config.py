@@ -30,6 +30,10 @@ def _load_secret_key():
 SECRET_KEY = _load_secret_key()
 DATABASE = os.path.join(BASE_DIR, "hiking.db")
 
+# Загрузка изображений маршрутов
+ROUTE_UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "img", "routes")
+MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 МБ на запрос
+
 # Cookie сессии
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
