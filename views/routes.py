@@ -483,8 +483,8 @@ def detail(route_id):
         db.execute("UPDATE routes SET views = views + 1 WHERE id = ?", (route_id,))
         db.commit()
 
-        points, places = load_map_data(db, route_id)
-        photos = {r["id"]: r for r in db.execute(
+    points, places = load_map_data(db, route_id)
+    photos = {r["id"]: r for r in db.execute(
         "SELECT id, filename, caption FROM route_photos WHERE route_id = ?", (route_id,))}
     gear = db.execute(
         """SELECT name, category FROM gear_items

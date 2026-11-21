@@ -107,6 +107,7 @@
       <input name="is_public" type="checkbox" {% if form.get('is_public') %}checked{% endif %}>
       Сделать маршрут публичным (если снять галочку, его увидите только вы)
     </label>
+    <p id="submit-error" class="message" role="alert" hidden></p>
     <button type="submit">Сохранить маршрут</button>
   </form>
 {% endblock %}

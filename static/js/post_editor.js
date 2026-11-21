@@ -101,33 +101,39 @@
                 go, msg);
 
     cap.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } });
-    go.addEventListener("click", function () {
+        /* Загрузка; возвращает Promise: true, если фото загружено */
+    function doUpload() {
       var f = file.files && file.files[0], c = cap.value.trim();
-      if (!f) { msg.textContent = "Сначала выберите фото."; file.focus(); return; }
-      if (!/\.(jpe?g|png|webp)$/i.test(f.name)) { msg.textContent = "Подойдут только JPG, PNG или WEBP."; return; }
+      if (!f) { msg.textContent = "Сначала выберите фото."; file.focus(); return Promise.resolve(false); }
+      if (!/\.(jpe?g|png|webp)$/i.test(f.name)) { msg.textContent = "Подойдут только JPG, PNG или WEBP."; return Promise.resolve(false); }
       if (f.size > MAX) {
         msg.textContent = "Файл весит " + (f.size / 1048576).toFixed(1).replace(".", ",") + " МБ, а можно до 5 МБ.";
-        file.value = ""; return;
+        file.value = ""; return Promise.resolve(false);
       }
-      if (!c) { msg.textContent = "Опишите, что на фото."; cap.focus(); return; }
+      if (!c) { msg.textContent = "Опишите, что на фото."; cap.focus(); return Promise.resolve(false); }
 
       var fd = new FormData();
       fd.append("photo", f); fd.append("caption", c);
       go.disabled = true; msg.textContent = "Загружаю…";
-      fetch(box.dataset.uploadUrl, {
+      return fetch(box.dataset.uploadUrl, {
         method: "POST", body: fd, credentials: "same-origin",
         headers: { "X-CSRFToken": csrf ? csrf.value : "" }
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (d.error) { msg.textContent = d.error; return; }
+          if (d.error) { msg.textContent = d.error; return false; }
           block.dataset.photoId = d.id;
+          block.classList.remove("post-block--error");
           showUploaded(body, d);
           status.textContent = "Фото загружено.";
-          block.focus();
+          return true;
         })
-        .catch(function () { msg.textContent = "Не удалось загрузить. Проверьте размер (до 5 МБ) и соединение."; })
-        .then(function () { go.disabled = false; });
+        .catch(function () { msg.textContent = "Не удалось загрузить. Проверьте размер (до 5 МБ) и соединение."; return false; })
+        .then(function (ok) { go.disabled = false; return ok; });
+    }
+    block._upload = doUpload;
+    go.addEventListener("click", function () {
+      doUpload().then(function (ok) { if (ok) { block.focus(); } });
     });
   }
 
@@ -144,14 +150,47 @@
   document.getElementById("add-photo-block").addEventListener("click", function () { addPhoto(null, true); });
 
   /* Собираем текст и метки [фото:N] из блоков при отправке формы */
+  var submitError = document.getElementById("submit-error");
+  var sending = false;
+
+  /* Показываем ошибку рядом с кнопкой «Сохранить» и подсвечиваем блок */
+  function fail(text, block) {
+    status.textContent = text;
+    if (submitError) { submitError.textContent = text; submitError.hidden = false; }
+    if (block) {
+      block.classList.add("post-block--error");
+      var f = block.querySelector("input, textarea");
+      (f || block).focus();
+    }
+  }
+
   form.addEventListener("submit", function (e) {
-    var waiting = holder.querySelector('.post-block[data-kind="photo"]:not([data-photo-id])');
-    if (waiting) {
+    if (submitError) { submitError.hidden = true; }
+    holder.querySelectorAll(".post-block--error").forEach(function (b) { b.classList.remove("post-block--error"); });
+
+    /* Фото выбраны, но не загружены: загружаем сами, потом отправляем форму */
+    var waiting = Array.prototype.slice.call(
+      holder.querySelectorAll('.post-block[data-kind="photo"]:not([data-photo-id])'));
+    if (waiting.length) {
       e.preventDefault();
-      status.textContent = "В одном из блоков фото ещё не загружено: нажмите «Загрузить фото» или уберите блок.";
-      waiting.focus();
+      if (sending) { return; }
+      sending = true;
+      status.textContent = "Загружаю фото…";
+      waiting.reduce(function (chain, block) {
+        return chain.then(function (okSoFar) {
+          if (!okSoFar) { return false; }
+          return block._upload().then(function (ok) {
+            if (!ok) { fail("Фото не загружено: выберите файл и опишите фото либо уберите этот блок.", block); }
+            return ok;
+          });
+        });
+      }, Promise.resolve(true)).then(function (ok) {
+        sending = false;
+        if (ok) { form.requestSubmit(); }
+      });
       return;
     }
+
     var parts = [];
     holder.querySelectorAll(".post-block").forEach(function (b) {
       if (b.dataset.kind === "text") {
@@ -163,9 +202,7 @@
     });
     if (!parts.length) {
       e.preventDefault();
-      status.textContent = "Напишите хотя бы немного текста.";
-      var first = holder.querySelector("textarea");
-      if (first) { first.focus(); }
+      fail("Напишите хотя бы немного текста в описании.", holder.querySelector(".post-block"));
       return;
     }
     hidden.value = parts.join("\n\n");
