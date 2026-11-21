@@ -426,10 +426,9 @@ label { display: block; margin-top: 1rem; font-weight: 700; font-size: .94rem; }
 .check { display: flex; align-items: center; margin: 0; }
 input, select, textarea {
   font: inherit; padding: .6rem .9rem; max-width: 100%; color: var(--text);
-  background: var(--pill-bg); border: 1px solid var(--border-subtle); border-radius: .9rem;
+  background: var(--pill-bg); border: 1.5px solid var(--input-border); border-radius: .9rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(125, 140, 105, 0.2); }
 input { width: 100%; max-width: 24rem; }
 input[type="checkbox"] { width: 1.15rem; height: 1.15rem; padding: 0; margin-right: .55rem; accent-color: var(--accent); }
 textarea, select { width: 100%; max-width: 40rem; }
