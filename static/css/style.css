@@ -353,7 +353,7 @@ html.js .hero:not(.is-fit) .hero-big { opacity: 0; }
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .route-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); border-color: var(--accent); }
-.route-card:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.route-card:has(a:focus-visible) { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 .route-thumb { position: relative; border-radius: 1.35rem; overflow: hidden; }
 .route-thumb img { display: block; width: 100%; aspect-ratio: 7 / 5; object-fit: cover; transition: transform 0.35s ease; }
@@ -554,3 +554,8 @@ details summary { cursor: pointer; font-weight: 700; margin-top: .75rem; }
 .post-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
 .post-block--error { border: 2px solid #b00020; }
 .message[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  .btn:hover, .btn:active, .route-card:hover { transform: none; }
+}
