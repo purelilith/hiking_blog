@@ -515,3 +515,40 @@ h1, h2, h3, h4,
   font-size: clamp(1rem, 1.35cqw, 1.15rem);
   max-width: 36rem;
 }
+
+/* Назад, посты с фото, места на карте */
+.back-link { display: inline-flex; align-items: center; gap: .4rem; margin-bottom: .75rem; padding: .3rem .9rem;
+             font-weight: 700; color: var(--text); text-decoration: none; background: var(--pill-bg);
+             border: 1px solid var(--border-subtle); border-radius: 999px; }
+.back-link:hover { background: var(--bg-elevated); border-color: var(--line); }
+.hint { margin: 0 0 .5rem; color: var(--text-muted); font-size: .92rem; }
+input[type="radio"] { width: 1.15rem; height: 1.15rem; padding: 0; margin-right: .55rem; accent-color: var(--accent); }
+.photo-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .6rem; }
+.photo-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+.photo-list img { border-radius: .6rem; object-fit: cover; }
+.photo-list span { flex: 1 1 12rem; }
+.mode-switch { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-bottom: .5rem; }
+.places-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.place-item { padding: 1rem; border: 2px solid var(--line); border-radius: 1.1rem; background: var(--pill-bg); }
+.place-item input { max-width: none; }
+.place-item button { margin-top: .75rem; }
+.post p { margin: 0 0 1rem; }
+.post-photo { margin: 1.25rem 0; }
+.post-photo img { display: block; width: 100%; max-height: 32rem; object-fit: cover; border-radius: 1.25rem; }
+.post-photo figcaption { margin-top: .4rem; color: var(--text-muted); font-size: .92rem; text-align: center; }
+.places-view { padding-left: 1.25rem; }
+.places-view .coords { color: var(--text-muted); font-size: .88rem; }
+details summary { cursor: pointer; font-weight: 700; margin-top: .75rem; }
+.photo-preview { display: block; max-width: 100%; max-height: 16rem; margin-bottom: .75rem; border-radius: 1rem; object-fit: cover; }
+.photo-preview[hidden] { display: none; }
+.post-block { margin-top: .75rem;  padding: 1rem; background: var(--pill-bg);
+              border: 2px solid var(--line); border-radius: 1.1rem; }
+.post-block-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+                   gap: .5rem; margin-bottom: .5rem; }
+.post-block-bar { display: flex; flex-wrap: wrap; gap: .4rem; }
+.post-block textarea { width: 100%; max-width: none; }
+.post-block .btn-small { margin-top: 0; }
+.post-photo-body .btn { margin-top: .75rem; }
+.post-thumb[hidden] { display: none; max-width: 100%; max-height: 14rem; border-radius: .9rem; object-fit: cover;  margin-top: .75rem; }
+.post-caption { margin: .5rem 0 0; color: var(--text-muted); }
+.post-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }

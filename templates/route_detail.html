@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block content %}
+  <a class="back-link" id="back-link" href="{{ url_for('routes.catalog') }}">← Назад</a>
   <h1>{{ route['title'] }}</h1>
   <ul class="chips">
     <li>{{ route['region'] }}</li>
@@ -32,7 +33,7 @@
 
   <img class="detail-photo" src="{{ route_image(route['id']) }}" alt="Фото маршрута: {{ route['title'] }}">
 
-  <section class="card"><h2>Описание</h2><p class="prewrap">{{ route['description'] }}</p></section>
+  <section class="card post"><h2>Описание</h2>{{ route['description']|post(photos) }}</section>
 
   <section class="card">
     <h2>Сроки, ограничения и источник</h2>
@@ -57,13 +58,22 @@
     </dl>
   </section>
 
-  <section class="card">
+    <section class="card">
     <h2>Карта маршрута</h2>
-    <div id="map" data-points='{{ points | tojson }}' aria-label="Карта маршрута"></div>
-    <h3 style="margin-top:1rem;">Маршрут по точкам</h3>
-    <ol>
-      {% for p in points %}<li>Точка {{ loop.index }}: {{ '%.5f'|format(p[0]) }}, {{ '%.5f'|format(p[1]) }}</li>{% endfor %}
-    </ol>
+    <div id="map" data-points='{{ points | tojson }}' data-places='{{ places | tojson }}' aria-label="Карта маршрута"></div>
+    {% if places %}
+      <h3 style="margin-top:1rem;">Места на маршруте</h3>
+      <ol class="places-view">
+        {% for p in places %}
+          <li><strong>{{ p.name }}</strong>{% if p.note %} — {{ p.note }}{% endif %}
+            <span class="coords">({{ '%.5f'|format(p.lat) }}, {{ '%.5f'|format(p.lon) }})</span></li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+    <details>
+      <summary>Координаты линии маршрута ({{ points|length }} точек)</summary>
+      <ol>{% for p in points %}<li>{{ '%.5f'|format(p[0]) }}, {{ '%.5f'|format(p[1]) }}</li>{% endfor %}</ol>
+    </details>
   </section>
 
   <section class="card" id="gear-section" data-route-id="{{ route['id'] }}">
@@ -88,9 +98,11 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="{{ url_for('static', filename='js/route_map.js') }}?v=2"></script>
-  <script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/tropa_map.js') }}?v=1"></script>
+    <script src="{{ url_for('static', filename='js/route_map.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/back.js') }}?v=1" defer></script>
+    <script>
     (function () {
       var sec = document.getElementById("gear-section");
       var prog = document.getElementById("gear-progress");

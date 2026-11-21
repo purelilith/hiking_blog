@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS route_points;
 DROP TABLE IF EXISTS routes;
 DROP TABLE IF EXISTS gear_items;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS route_photos;
 
 CREATE TABLE users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,10 +43,22 @@ CREATE TABLE route_points (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,
     route_id INTEGER NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
+    kind     TEXT NOT NULL DEFAULT 'path' CHECK (kind IN ('path', 'place')),
     lat      REAL NOT NULL,
     lon      REAL NOT NULL,
+    name     TEXT,
     note     TEXT
 );
+
+CREATE TABLE route_photos (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    route_id   INTEGER REFERENCES routes(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    filename   TEXT NOT NULL,
+    caption    TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_photos_route ON route_photos(route_id);
 
 CREATE TABLE gear_items (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,

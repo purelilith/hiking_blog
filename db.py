@@ -39,6 +39,19 @@ def ensure_schema():
                    "ON users(username COLLATE NOCASE)")
     except sqlite3.IntegrityError:
         pass  # в старой базе есть имена, различающиеся только регистром
+    pcols = {r["name"] for r in db.execute("PRAGMA table_info(route_points)")}
+    if "kind" not in pcols:
+        db.execute("ALTER TABLE route_points ADD COLUMN kind TEXT NOT NULL DEFAULT 'path'")
+    if "name" not in pcols:
+        db.execute("ALTER TABLE route_points ADD COLUMN name TEXT")
+    db.execute("""CREATE TABLE IF NOT EXISTS route_photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        route_id INTEGER REFERENCES routes(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        filename TEXT NOT NULL,
+        caption TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_photos_route ON route_photos(route_id)")
     db.commit()
 
 

@@ -1,13 +1,17 @@
 import json
 import math
 import os
+import re
+import secrets
 from datetime import date
 
-from flask import (Blueprint, abort, current_app, flash, g, redirect,
+from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect,
                    render_template, request, url_for)
+from markupsafe import Markup, escape
 from werkzeug.utils import secure_filename
 
 from db import get_db
+from extensions import limiter
 from views.auth import login_required
 
 bp = Blueprint("routes", __name__, url_prefix="/routes")
@@ -16,6 +20,8 @@ DIFFICULTY = {"easy": "Лёгкий", "medium": "Средний", "hard": "Сл�
 SEASONS = {"any": "Любой", "summer": "Лето", "winter": "Зима", "spring_autumn": "Весна/осень"}
 TERRAINS = {"any": "Любая", "forest": "Лес", "mountain": "Горы", "city": "Город", "water": "Вода/берег"}
 PER_PAGE = 10
+PHOTO_TOKEN = re.compile(r"\[фото:(\d{1,9})\]")  # метка фото в тексте: [фото:12]
+MAX_PLACES = 50
 
 ALLOWED_EXTENSIONS = {
     "jpg": "jpg",
@@ -145,6 +151,7 @@ def read_route_form(f):
     source_url = opt("source_url")
     open_from, open_to, source_checked = opt("open_from"), opt("open_to"), opt("source_checked")
     points = parse_points(f.get("points", "[]"))
+    places = parse_places(f.get("places"))
     long_fields = [opt("restrictions"), opt("surface"), opt("max_slope"),
                    opt("rest_points"), source_url]
     try:
@@ -172,6 +179,8 @@ def read_route_form(f):
         error = "Дата открытия позже даты закрытия."
     elif points is None or len(points) < 2:
         error = "Добавьте на карте минимум две точки маршрута."
+    elif places is None:
+        error = "Проверьте места на карте: у каждого должно быть название до 80 символов."
 
     data = {
         "title": title, "region": region,
@@ -184,15 +193,112 @@ def read_route_form(f):
         "max_slope": opt("max_slope"), "has_steps": 1 if f.get("has_steps") else 0,
         "rest_points": opt("rest_points"),
     }
-    return data, points, error
+    return data, points, places, error
 
 
-def save_points(db, route_id, points):
+def save_points(db, route_id, points, places):
     db.executemany(
-        "INSERT INTO route_points (route_id, position, lat, lon) VALUES (?, ?, ?, ?)",
+        "INSERT INTO route_points (route_id, position, kind, lat, lon) VALUES (?, ?, 'path', ?, ?)",
         [(route_id, i, lat, lon) for i, (lat, lon) in enumerate(points)],
     )
+    db.executemany(
+        "INSERT INTO route_points (route_id, position, kind, lat, lon, name, note) "
+        "VALUES (?, ?, 'place', ?, ?, ?, ?)",
+        [(route_id, i, lat, lon, name, note) for i, (lat, lon, name, note) in enumerate(places)],
+    )
 
+
+def parse_places(raw):
+    """Места из формы: JSON-список {lat, lon, name, note}. При ошибке вернёт None."""
+    try:
+        items = json.loads(raw or "[]")
+        if not isinstance(items, list) or len(items) > MAX_PLACES:
+            return None
+        places = []
+        for it in items:
+            lat, lon = float(it["lat"]), float(it["lon"])
+            name, note = str(it.get("name", "")).strip(), str(it.get("note", "")).strip()
+            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                return None
+            if not name or len(name) > 80 or len(note) > 300:
+                return None
+            places.append((lat, lon, name, note or None))
+        return places
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return None
+
+
+def load_map_data(db, route_id):
+    """Линия маршрута и названные места из базы."""
+    rows = db.execute(
+        "SELECT kind, lat, lon, name, note FROM route_points WHERE route_id = ? ORDER BY position",
+        (route_id,),
+    ).fetchall()
+    points = [[r["lat"], r["lon"]] for r in rows if r["kind"] == "path"]
+    places = [{"lat": r["lat"], "lon": r["lon"], "name": r["name"] or "", "note": r["note"] or ""}
+              for r in rows if r["kind"] == "place"]
+    return points, places
+
+
+def form_photos(db, route_id=None):
+    """Фото, которые можно вставить в текст: этого маршрута и свежие несохранённые."""
+    return db.execute(
+        "SELECT id, filename, caption FROM route_photos WHERE user_id = ? AND "
+        "(route_id = ? OR (route_id IS NULL AND created_at >= datetime('now', '-1 day'))) ORDER BY id",
+        (g.user["id"], route_id or -1),
+    ).fetchall()
+
+
+def sync_photos(db, route_id, description):
+    """Привязывает фото из текста к маршруту, а ненужные удаляет из базы.
+    Возвращает имена файлов, которые нужно стереть после commit."""
+    ids = {int(i) for i in PHOTO_TOKEN.findall(description)}
+    for pid in ids:
+        db.execute("UPDATE route_photos SET route_id = ? WHERE id = ? AND user_id = ? "
+                   "AND (route_id IS NULL OR route_id = ?)", (route_id, pid, g.user["id"], route_id))
+    old = db.execute(
+        "SELECT id, filename FROM route_photos WHERE route_id = ? OR "
+        "(user_id = ? AND route_id IS NULL AND created_at < datetime('now', '-1 day'))",
+        (route_id, g.user["id"]),
+    ).fetchall()
+    gone = [r for r in old if r["id"] not in ids]
+    for r in gone:
+        db.execute("DELETE FROM route_photos WHERE id = ?", (r["id"],))
+    return [r["filename"] for r in gone]
+
+
+def _posts_dir():
+    folder = os.path.join(current_app.static_folder, "img", "posts")
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _remove_post_files(names):
+    for n in names:
+        try:
+            os.remove(os.path.join(_posts_dir(), n))
+        except OSError:
+            pass
+
+
+@bp.app_template_filter("post")
+def render_post(text, photos):
+    """Описание как пост: абзацы текста и фото на месте меток [фото:N]."""
+    out = []
+    for i, chunk in enumerate(PHOTO_TOKEN.split(text or "")):
+        if i % 2 == 0:
+            for para in re.split(r"\n\s*\n", chunk.strip()):
+                if para.strip():
+                    lines = Markup("<br>").join(escape(l) for l in para.splitlines())
+                    out.append(Markup("<p>%s</p>") % lines)
+        else:
+            photo = photos.get(int(chunk))
+            if photo:
+                url = url_for("static", filename="img/posts/" + photo["filename"])
+                out.append(Markup('<figure class="post-photo"><img src="%s" alt="%s" loading="lazy">'
+                                  '<figcaption aria-hidden="true">%s</figcaption></figure>')
+                           % (url, photo["caption"], photo["caption"]))
+    return Markup("\n").join(out)
 
 def get_own_route(route_id):
     route = get_db().execute("SELECT * FROM routes WHERE id = ?", (route_id,)).fetchone()
@@ -207,7 +313,7 @@ def get_own_route(route_id):
 @login_required
 def create():
     if request.method == "POST":
-        data, points, error = read_route_form(request.form)
+        data, points, places, error = read_route_form(request.form)
         photo = request.files.get("photo")
         if error is None and photo and photo.filename:
             _, photo_error = _detect_image_ext(photo)
@@ -218,19 +324,22 @@ def create():
             db = get_db()
             cur = db.execute(INSERT_SQL, {**data, "author_id": g.user["id"]})
             route_id = cur.lastrowid
-            save_points(db, route_id, points)
+            save_points(db, route_id, points, places)
+            gone = sync_photos(db, route_id, data["description"])
             photo_err = save_route_photo(route_id, photo)
             if photo_err:
                 db.rollback()
                 flash(photo_err)
             else:
                 db.commit()
+                _remove_post_files(gone)
                 flash("Маршрут сохранён.")
                 return redirect(url_for("routes.detail", route_id=route_id))
         else:
             flash(error)
     form = request.form if request.method == "POST" else {"is_public": 1}
     return render_template("route_form.html", form=form, editing=False, route_id=None,
+                           photos=form_photos(get_db()),
                            difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
 
 
@@ -240,7 +349,7 @@ def edit(route_id):
     route = get_own_route(route_id)
     db = get_db()
     if request.method == "POST":
-        data, points, error = read_route_form(request.form)
+        data, points, places, error = read_route_form(request.form)
         photo = request.files.get("photo")
         remove_photo = bool(request.form.get("remove_photo"))
         if error is None and photo and photo.filename:
@@ -251,25 +360,27 @@ def edit(route_id):
         if error is None:
             db.execute(UPDATE_SQL, {**data, "id": route_id, "author_id": g.user["id"]})
             db.execute("DELETE FROM route_points WHERE route_id = ?", (route_id,))
-            save_points(db, route_id, points)
+            save_points(db, route_id, points, places)
+            gone = sync_photos(db, route_id, data["description"])
             photo_err = save_route_photo(route_id, photo, remove_existing=remove_photo)
             if photo_err:
                 db.rollback()
                 flash(photo_err)
             else:
                 db.commit()
+                _remove_post_files(gone)
                 flash("Изменения сохранены.")
                 return redirect(url_for("routes.detail", route_id=route_id))
         else:
             flash(error)
         form = request.form
     else:
-        points = [[p["lat"], p["lon"]] for p in db.execute(
-            "SELECT lat, lon FROM route_points WHERE route_id = ? ORDER BY position", (route_id,))]
-        form = {**dict(route), "points": json.dumps(points)}
+        points, places = load_map_data(db, route_id)
+        form = {**dict(route), "points": json.dumps(points),
+                "places": json.dumps(places, ensure_ascii=False)}
     return render_template("route_form.html", form=form, editing=True, route_id=route_id,
+                           photos=form_photos(db, route_id),
                            difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
-
 
 @bp.route("/<int:route_id>/visibility", methods=("POST",))
 @login_required
@@ -288,9 +399,12 @@ def toggle_visibility(route_id):
 def delete(route_id):
     get_own_route(route_id)
     db = get_db()
+    names = [r["filename"] for r in db.execute(
+        "SELECT filename FROM route_photos WHERE route_id = ?", (route_id,))]
     db.execute("DELETE FROM routes WHERE id = ? AND author_id = ?", (route_id, g.user["id"]))
     db.commit()
     _remove_route_images(route_id)
+    _remove_post_files(names)
     flash("Маршрут удалён.")
     return redirect(url_for("routes.mine"))
 
@@ -369,8 +483,9 @@ def detail(route_id):
         db.execute("UPDATE routes SET views = views + 1 WHERE id = ?", (route_id,))
         db.commit()
 
-    points = [[p["lat"], p["lon"]] for p in db.execute(
-        "SELECT lat, lon FROM route_points WHERE route_id = ? ORDER BY position", (route_id,))]
+        points, places = load_map_data(db, route_id)
+        photos = {r["id"]: r for r in db.execute(
+        "SELECT id, filename, caption FROM route_photos WHERE route_id = ?", (route_id,))}
     gear = db.execute(
         """SELECT name, category FROM gear_items
            WHERE season IN ('any', ?) AND terrain IN ('any', ?) AND min_days <= ?
@@ -378,7 +493,7 @@ def detail(route_id):
         (route["season"], route["terrain"], route["days"]),
     ).fetchall()
     return render_template("route_detail.html", route=route, points=points, gear=gear,
-                           difficulty=DIFFICULTY)
+                           difficulty=DIFFICULTY, places=places, photos=photos,)
 
 
 @bp.route("/mine")
@@ -389,3 +504,30 @@ def mine():
         (g.user["id"],),
     ).fetchall()
     return render_template("my_routes.html", routes=routes, difficulty=DIFFICULTY)
+
+
+@bp.route("/photo", methods=("POST",))
+@limiter.limit("60 per hour")
+@login_required
+def upload_photo():
+    file = request.files.get("photo")
+    caption = request.form.get("caption", "").strip()
+    if not file or not file.filename:
+        return jsonify(error="Выберите файл."), 400
+    if not caption or len(caption) > 200:
+        return jsonify(error="Опишите фото (до 200 символов)."), 400
+    ext, error = _detect_image_ext(file)
+    if error:
+        return jsonify(error=error), 400
+    db = get_db()
+    pending = db.execute("SELECT COUNT(*) FROM route_photos WHERE user_id = ? AND route_id IS NULL",
+                         (g.user["id"],)).fetchone()[0]
+    if pending >= 30:
+        return jsonify(error="Слишком много несохранённых фото. Сохраните маршрут."), 400
+    name = f"{secrets.token_hex(12)}.{ext}"
+    file.save(os.path.join(_posts_dir(), name))
+    cur = db.execute("INSERT INTO route_photos (user_id, filename, caption) VALUES (?, ?, ?)",
+                     (g.user["id"], name, caption))
+    db.commit()
+    return jsonify(id=cur.lastrowid, caption=caption,
+                   url=url_for("static", filename=f"img/posts/{name}"))

@@ -1,24 +1,20 @@
 (function () {
-  const el = document.getElementById("map");
+  var el = document.getElementById("map");
   if (!el) return;
-  let points = [];
+  var points = [], places = [];
   try { points = JSON.parse(el.dataset.points || "[]"); } catch (e) {}
+  try { places = JSON.parse(el.dataset.places || "[]"); } catch (e) {}
 
-  const map = L.map("map").setView([55.75, 37.62], 5);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; участники OpenStreetMap"
-  }).addTo(map);
-
-  if (points.length > 0) {
-    const line = L.polyline(points, { color: "#bf6a02", weight: 4 }).addTo(map);
-    points.forEach(function (p, i) {
-      L.marker(p).addTo(map).bindPopup("Точка " + (i + 1));
-    });
-    if (points.length > 1) {
-      map.fitBounds(line.getBounds().pad(0.2));
-    } else {
-      map.setView(points[0], 13);
-    }
+  var map = TropaMap.create("map");
+  var group = L.featureGroup().addTo(map);
+  if (points.length > 1) {
+    L.polyline(points, { color: "#bf6a02", weight: 4 }).addTo(group);
+  }
+  places.forEach(function (p) {
+    L.marker([p.lat, p.lon], { title: p.name, alt: p.name })
+      .addTo(group).bindPopup(TropaMap.placePopup(p));
+  });
+  if (group.getLayers().length) {
+    map.fitBounds(group.getBounds().pad(0.2), { maxZoom: 15 });
   }
 })();
