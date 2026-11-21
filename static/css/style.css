@@ -243,9 +243,9 @@ html[data-theme="dark"] .logo img { filter: invert(1) brightness(1.1); }
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(22, 28, 20, 0.34) 0%,
-    rgba(22, 28, 20, 0.14) 48%,
-    rgba(16, 20, 15, 0.62) 100%
+    rgba(16, 20, 15, 0.52) 0%,
+    rgba(16, 20, 15, 0.30) 48%,
+    rgba(16, 20, 15, 0.70) 100%
   );
   z-index: 1;
   pointer-events: none;
@@ -309,7 +309,7 @@ html.js .hero:not(.is-fit) .hero-big { opacity: 0; }
 }
 .btn-hero {
   padding: .42rem .45rem .42rem 1.3rem;
-  background: rgba(125, 140, 105, 0.92);
+  background: rgba(63, 76, 51, 0.92);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
