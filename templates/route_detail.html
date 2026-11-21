@@ -42,7 +42,8 @@
       <dd>{% if route['open_from'] or route['open_to'] %}с {{ route['open_from'] or '—' }} по {{ route['open_to'] or '—' }}{% else %}круглый год / даты не указаны{% endif %}</dd>
       <dt>Ограничения</dt><dd>{{ route['restrictions'] or 'не указаны' }}</dd>
       <dt>Источник</dt>
-      <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" target="_blank" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}</dd>
+      <dd>{% if route['source_url'] %}<a href="{{ route['source_url'] }}" target="_blank" rel="noopener noreferrer">{{ route['source_url'] }}</a>{% else %}не указан{% endif %}
+      <span class="visually-hidden"> (откроется в новой вкладке)</span></dd>
       <dt>Данные собраны и проверены</dt><dd>{{ route['source_checked'] or 'дата не указана' }}</dd>
     </dl>
     <p style="margin-top:1rem; color: var(--text-muted); font-size: .92rem;">Перед выходом уточните актуальность информации на сайте источника.</p>
@@ -60,7 +61,7 @@
 
     <section class="card">
     <h2>Карта маршрута</h2>
-    <div id="map" data-points='{{ points | tojson }}' data-places='{{ places | tojson }}' aria-label="Карта маршрута"></div>
+    <div id="map" role="region" data-points='{{ points | tojson }}' data-places='{{ places | tojson }}' aria-label="Карта маршрута"></div>
     {% if places %}
       <h3 style="margin-top:1rem;">Места на маршруте</h3>
       <ol class="places-view">

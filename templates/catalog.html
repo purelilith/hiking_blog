@@ -16,6 +16,7 @@
 
   <h1>Каталог маршрутов</h1>
   <form class="card filters" method="get" aria-label="Фильтры маршрутов" style="max-width:none">
+    <h2 class="visually-hidden">Фильтры</h2>
     <div class="filters-grid">
       <div class="field"><label for="region">Регион</label>
         <input id="region" name="region" type="text" placeholder="Например, Карелия" value="{{ args.get('region', '') }}"></div>
@@ -45,6 +46,7 @@
   </form>
 
   <p role="status" style="margin-top:1.25rem;">Найдено маршрутов: <strong>{{ total }}</strong></p>
+  <h2 class="visually-hidden">Список маршрутов</h2>
   <ul class="route-list">
     {% for r in routes %}{% include "_route_card.html" %}
     {% else %}<li class="empty card">Ничего не найдено. Попробуйте изменить фильтры.</li>
