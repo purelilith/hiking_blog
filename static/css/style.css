@@ -6,9 +6,10 @@
   --bg-elevated: #f3f4ef;
   --header-bg: rgba(255, 255, 255, 0.86);
   --text: #222620;
-  --text-muted: #6c7267;
-  --accent: #7d8c69;
-  --accent-hover: #677654;
+  --text-muted: #5a6055;
+  --accent: #556744;
+  --accent-hover: #3f4c33;
+  --input-border: #7d8574;
   --accent-text: #ffffff;
   --line: #5b694a;
   --border-subtle: rgba(34, 38, 32, 0.09);
