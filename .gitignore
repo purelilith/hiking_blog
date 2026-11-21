@@ -3,3 +3,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
+venv/
+hiking.db
+static/img/posts/
