@@ -22,7 +22,7 @@
     <li>Сезон: {{ SEASONS[route['season']] }}</li>
     <li>Местность: {{ TERRAINS[route['terrain']] }}</li>
   </ul>
-  <p class="byline">Автор: {{ route['username'] }} · Просмотров: {{ route['views'] }}{% if not route['is_public'] %} · приватный маршрут, виден только вам{% endif %}</p>
+  <p class="byline">Автор: {{ route['username'] }}{% if route['kind'] != 'curated' %} · Просмотров: {{ route['views'] }}{% endif %}{% if not route['is_public'] %} · приватный маршрут, виден только вам{% endif %}</p>
 
   {% if g.user and g.user['id'] == route['author_id'] %}
     <section class="manage" aria-label="Управление маршрутом">

@@ -114,6 +114,7 @@ def _detect_image_ext(file_storage):
 
     return ALLOWED_EXTENSIONS[ext], None
 
+
 def save_route_photo(route_id, file_storage, remove_existing=False):
     if remove_existing:
         _remove_route_images(route_id)
@@ -302,6 +303,7 @@ def render_post(text, photos):
                            % (url, photo["caption"], photo["caption"]))
     return Markup("\n").join(out)
 
+
 def get_own_route(route_id):
     route = get_db().execute("SELECT * FROM routes WHERE id = ?", (route_id,)).fetchone()
     if route is None:
@@ -383,6 +385,7 @@ def edit(route_id):
     return render_template("route_form.html", form=form, editing=True, route_id=route_id,
                            photos=form_photos(db, route_id),
                            difficulty=DIFFICULTY, seasons=SEASONS, terrains=TERRAINS)
+
 
 @bp.route("/<int:route_id>/visibility", methods=("POST",))
 @login_required
@@ -484,7 +487,7 @@ def detail(route_id):
     if route is None or (not route["is_public"] and (g.user is None or g.user["id"] != route["author_id"])):
         abort(404)
 
-    if g.user is None or g.user["id"] != route["author_id"]:
+    if route["kind"] != "curated" and (g.user is None or g.user["id"] != route["author_id"]):
         db.execute("UPDATE routes SET views = views + 1 WHERE id = ?", (route_id,))
         db.commit()
 
@@ -510,6 +513,7 @@ def mine():
     ).fetchall()
     return render_template("my_routes.html", routes=routes, difficulty=DIFFICULTY)
 
+
 @bp.app_template_global("route_badges")
 def route_badges(r):
     """Метки под названием маршрута: список пар (css-класс, текст)."""
@@ -530,6 +534,7 @@ def route_badges(r):
         except ValueError:
             pass
     return badges
+
 
 @bp.route("/photo", methods=("POST",))
 @limiter.limit("60 per hour")
