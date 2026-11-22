@@ -1,9 +1,14 @@
-"""Начальные данные: чек-лист снаряжения и примеры маршрутов.
+"""Начальные данные: чек-лист снаряжения и проверенные маршруты.
 
-Запуск: python seed.py [ИМЯ]
-Маршруты записываются на пользователя ИМЯ (чтобы вы могли править их на сайте);
-без имени используется служебный пользователь catalog.
-Если рядом лежит seed_data.json, маршруты берутся из него, а не из списка ROUTES ниже.
+Запуск (после `flask --app app init-db`):
+    python seed.py [ИМЯ]
+
+Маршруты берутся из seed_data.json (его создаёт export_routes.py), обложки из seed_photos/routeN.jpg.
+У каждого маршрута есть линия на карте ("points") и названные места ("places").
+Автор маршрутов: пользователь ИМЯ (он должен уже существовать, чтобы вы могли править маршруты
+на сайте) или, если имя не указано, служебный пользователь DEFAULT_OWNER со случайным паролем:
+войти под ним нельзя, а маршруты видят все, в том числе неавторизованные посетители.
+Повторный запуск безопасен: маршруты с теми же названиями у того же автора заменяются.
 """
 import glob
 import json
@@ -16,6 +21,10 @@ from werkzeug.security import generate_password_hash
 
 from app import app
 from db import get_db
+
+# Под этим именем в каталоге будут показаны маршруты, если запустить `python seed.py` без имени.
+# Можно заменить на свой ник (3–32 символа: буквы, цифры, «.», «_», «-»).
+DEFAULT_OWNER = "catalog"
 
 # Снаряжение: (название, категория, сезон, местность, с какого числа дней нужно)
 # Сезон и местность 'any' значат «подходит всегда»
@@ -59,217 +68,146 @@ GEAR = [
     ("Налобный фонарь с запасными батарейками", "Безопасность", "any", "any", 2),
 ]
 
-# ---- Настройки ----
-# Фото обложек лежат в seed_photos/ (valdai.jpg, baikal.jpg, sestroretsk.jpg, iremel.jpg).
+# ---- Пути и настройки ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_PATH = os.path.join(BASE_DIR, "seed_data.json")
 PHOTO_DIR = os.path.join(BASE_DIR, "seed_photos")
 ROUTE_IMG_DIR = os.path.join(BASE_DIR, "static", "img", "routes")
-OWNER = sys.argv[1] if len(sys.argv) > 1 else "catalog"
-CHECKED = "2026-11-22"  # дата, когда проверены источники
+OWNER = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OWNER
 
-# Запасной список маршрутов (используется, только если нет seed_data.json).
-# length_km взята из источников. Линии маршрута нет: нарисуйте её на сайте через «Редактировать».
-ROUTES = [
-    {
-        "photo": "valdai",
-        "title": "Большая Валдайская тропа (центральный участок)",
-        "region": "Новгородская область",
-        "difficulty": "easy", "days": 4, "season": "summer", "terrain": "forest",
-        "length_km": 52,
-        "description": (
-            "Маркированный маршрут по территории национального парка «Валдайский». "
-            "По данным путеводителя на август 2026 года вся тропа составляет 77 км: 52 км центрального "
-            "участка и 25 км северного, старт у них общий, у информационного центра. Центральный участок "
-            "проходят за 3–5 дней. Каждый километр отмечен, оборудованные стоянки расположены через "
-            "12–14 км, по пути есть источники воды, но нет магазинов."
-        ),
-        "restrictions": (
-            "Нужны пропуск в национальный парк и билет на размещение на стоянках. По данным одного из "
-            "обзоров вход стоил 250 ₽ (цену уточняйте). Тропа доступна с мая по ноябрь, лучше идти "
-            "до конца сентября."
-        ),
-        "source_url": "https://t-j.ru/bolshaya-valdayskaya-tropa/",
-        "source_checked": CHECKED,
-        "open_from": "2026-05-01", "open_to": "2026-11-30",
-        "rest_points": "Оборудованные стоянки через каждые 12–14 км",
-        "places": [
-            {"name": "Валдай (ближайший город)", "lat": 57.9811, "lon": 33.2475,
-             "note": "Ориентир, координаты приблизительные."},
-            {"name": "Большая Валдайская тропа (ориентир из путеводителя)", "lat": 57.83369, "lon": 33.085895,
-             "note": "Координаты из путеводителя, уточните на карте."},
-        ],
-    },
-    {
-        "photo": "baikal",
-        "title": "Большая Байкальская тропа: Листвянка — Большие Коты",
-        "region": "Иркутская область",
-        "difficulty": "medium", "days": 1, "season": "summer", "terrain": "mountain",
-        "length_km": 24, "is_closed": 1,
-        "description": (
-            "Один из самых популярных и обустроенных участков Большой Байкальской тропы вдоль "
-            "юго-западного берега Байкала, на территории Прибайкальского национального парка. "
-            "Маршрут начинается в Листвянке с долгого подъёма примерно на 3,5 км, дальше идёт по "
-            "гребням и склонам с видами на озеро. Обычно проходится за один день. Источники называют "
-            "длину от 24 до 25 км."
-        ),
-        "restrictions": (
-            "ВНИМАНИЕ: в сентябре 2026 года нацпарк «Заповедное Прибайкалье» закрыл маршрут из-за "
-            "активности медведей; по сообщениям СМИ от 22.09.2026 он закрыт как минимум до середины "
-            "октября. Сообщений о повторном открытии на дату проверки не найдено: перед выходом "
-            "уточняйте статус на официальном сайте нацпарка. Для посещения участка в нацпарке нужно "
-            "заранее оформлять разрешение."
-        ),
-        "source_url": "https://www.kommersant.ru/doc/8936573",
-        "source_checked": CHECKED,
-        "surface": "Грунтовая тропа; бывает скользкой, особенно после заморозков",
-        "max_slope": "Долгий подъём (около 3,5 км) в начале маршрута",
-        "places": [
-            {"name": "Листвянка (старт)", "lat": 51.8667, "lon": 104.8333,
-             "note": "Ориентир, координаты приблизительные."},
-            {"name": "Большие Коты (финиш)", "lat": 51.9022, "lon": 105.0697,
-             "note": "Ориентир, координаты приблизительные."},
-        ],
-    },
-    {
-        "photo": "sestroretsk",
-        "title": "Экотропа «Сестрорецкое болото»",
-        "region": "Санкт-Петербург",
-        "difficulty": "easy", "days": 1, "season": "any", "terrain": "water",
-        "length_km": 3.5,
-        "description": (
-            "Короткая экологическая тропа по государственному природному заказнику «Сестрорецкое "
-            "болото». Большая часть пути проложена по деревянным настилам на сваях, они чередуются с "
-            "участками лесной тропы по песчаным дюнам и древним береговым валам. Вдоль маршрута стоят "
-            "информационные стенды и смотровые площадки. Источники называют длину от 3 до 3,5 км."
-        ),
-        "restrictions": (
-            "Вход бесплатный. Не сходите с настила и тропы: вокруг топкое болото, отклоняться от "
-            "маршрута опасно. В заказнике встречаются гадюки."
-        ),
-        "source_url": "https://travel.yandex.ru/journal/sestroretsk/",
-        "source_checked": CHECKED,
-        "surface": "Деревянные настилы на сваях и участки лесной тропы по сухим дюнам",
-        "has_steps": 1,
-        "rest_points": "Смотровые площадки",
-        "places": [
-            {"name": "Белоостров (рядом начало тропы)", "lat": 60.15, "lon": 30.0,
-             "note": "Ориентир, координаты приблизительные."},
-        ],
-    },
-    {
-        "photo": "iremel",
-        "title": "Большой Иремель (природный парк «Иремель»)",
-        "region": "Республика Башкортостан",
-        "difficulty": "medium", "days": 2, "season": "any", "terrain": "mountain",
-        "length_km": 25,
-        "description": (
-            "Вторая по высоте вершина Южного Урала, 1582 м, в центре природного парка «Иремель». "
-            "Маршрут от села Тюлюк около 25 км по описанию. Туристические агентства организуют поездки "
-            "на внедорожниках до КПП, дальше до вершины около 8 км пешком. В парке обитают медведи: "
-            "зимой они спят, летом стараются не встречаться с людьми."
-        ),
-        "restrictions": (
-            "Посетителям разрешено находиться только в туристической зоне и на территории палаточных "
-            "лагерей; в остальных зонах парка находиться запрещено. Правила посещения, плату и "
-            "регистрацию уточняйте на официальном сайте парка."
-        ),
-        "source_url": "https://www.sportmaster.ru/media/articles/turisticheskie-pohody-v-gory-urala-vershina-iremel/",
-        "source_checked": CHECKED,
-        "places": [
-            {"name": "Большой Иремель (вершина, 1582 м)", "lat": 54.52, "lon": 58.84,
-             "note": "Ориентир, координаты приблизительные."},
-        ],
-    },
-]
+REQUIRED = ("title", "region", "length_km", "difficulty", "description")
+DIFFICULTIES = ("easy", "medium", "hard")
 
-# Если есть seed_data.json (его создаёт export_routes.py), берём маршруты оттуда
-JSON_PATH = os.path.join(BASE_DIR, "seed_data.json")
-if os.path.exists(JSON_PATH):
-    with open(JSON_PATH, encoding="utf-8") as f:
-        ROUTES = json.load(f)
-
-# Значения для полей, которых нет в описании маршрута
+# Значения для полей, которых нет в seed_data.json
 DEFAULTS = {
-    "restrictions": None, "source_url": None, "source_checked": None, "open_from": None,
-    "open_to": None, "surface": None, "max_slope": None, "has_steps": 0, "rest_points": None,
-    "kind": "curated", "is_closed": 0
+    "days": 1, "season": "any", "terrain": "any",
+    "restrictions": None, "source_url": None, "source_checked": None,
+    "open_from": None, "open_to": None, "surface": None, "max_slope": None,
+    "has_steps": 0, "rest_points": None, "kind": "curated", "is_closed": 0,
 }
 
 
+def load_routes():
+    """Читает и проверяет seed_data.json; при ошибке завершает скрипт понятным сообщением."""
+    if not os.path.exists(JSON_PATH):
+        sys.exit("Не найден seed_data.json. Получите файл из репозитория "
+                 "или создайте его командой: python export_routes.py ИМЯ")
+    with open(JSON_PATH, encoding="utf-8") as f:
+        routes = json.load(f)
+    if not isinstance(routes, list) or not routes:
+        sys.exit("seed_data.json пуст или имеет неверный формат (ожидается список маршрутов).")
+    for i, r in enumerate(routes, 1):
+        missing = [k for k in REQUIRED if r.get(k) in (None, "")]
+        if missing:
+            sys.exit(f"Маршрут №{i}: не заполнены поля {', '.join(missing)}.")
+        if r["difficulty"] not in DIFFICULTIES:
+            sys.exit(f"Маршрут «{r['title']}»: сложность должна быть одной из {DIFFICULTIES}.")
+        if len(r.get("points", [])) < 2:
+            print(f"  ! у маршрута «{r['title']}» меньше двух точек линии: на карте не будет пути")
+    return routes
+
+
+def find_cover(key):
+    """Путь к seed_photos/<key>.(jpg|jpeg|png|webp) или None."""
+    for ext in ("jpg", "jpeg", "png", "webp"):
+        path = os.path.join(PHOTO_DIR, f"{key}.{ext}")
+        if key and os.path.exists(path):
+            return path
+    return None
+
+
 def remove_route_images(route_id):
-    """Удаляет старую обложку маршрута из static/img/routes."""
+    """Удаляет обложки маршрута из static/img/routes (в том числе забытые от старых запусков)."""
     for f in glob.glob(os.path.join(ROUTE_IMG_DIR, f"{route_id}.*")):
         os.remove(f)
 
 
 def copy_cover(route_id, key):
-    """Копирует seed_photos/<key>.jpg в static/img/routes/<номер маршрута>.jpg."""
-    for ext in ("jpg", "jpeg", "png", "webp"):
-        src = os.path.join(PHOTO_DIR, f"{key}.{ext}")
-        if os.path.exists(src):
-            os.makedirs(ROUTE_IMG_DIR, exist_ok=True)
-            shutil.copyfile(src, os.path.join(ROUTE_IMG_DIR, f"{route_id}.{ext}"))
-            return True
-    print(f"  нет фото seed_photos/{key}.jpg (будет заглушка)")
-    return False
+    """Копирует обложку в static/img/routes/<номер маршрута>.<расширение>."""
+    src = find_cover(key)
+    if src is None:
+        print(f"  ! нет файла seed_photos/{key}.jpg: у маршрута будет заглушка")
+        return
+    os.makedirs(ROUTE_IMG_DIR, exist_ok=True)
+    remove_route_images(route_id)
+    shutil.copyfile(src, os.path.join(ROUTE_IMG_DIR, f"{route_id}{os.path.splitext(src)[1]}"))
 
+
+ROUTES = load_routes()
 
 with app.app_context():
     db = get_db()
 
-    # Снаряжение: список заменяется целиком
-    db.execute("DELETE FROM gear_items")
-    db.executemany(
-        "INSERT INTO gear_items (name, category, season, terrain, min_days) VALUES (?, ?, ?, ?, ?)",
-        GEAR,
-    )
+    # База должна быть создана заранее
+    has_tables = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'routes'").fetchone()
+    if has_tables is None:
+        sys.exit("База не создана. Сначала выполните: flask --app app init-db")
 
-    # Автор маршрутов: пользователь из команды или служебный catalog (создаётся при необходимости)
+    # Автор маршрутов: существующий пользователь или служебный (создаётся при необходимости)
     user = db.execute("SELECT id FROM users WHERE username = ?", (OWNER,)).fetchone()
     if user is not None:
         author_id = user["id"]
-    elif OWNER == "catalog":
+    elif OWNER == DEFAULT_OWNER:
         author_id = db.execute(
-            "INSERT INTO users (username, password_hash) VALUES ('catalog', ?)",
-            (generate_password_hash(secrets.token_urlsafe(32)),),
+            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+            (DEFAULT_OWNER, generate_password_hash(secrets.token_urlsafe(32))),
         ).lastrowid
     else:
-        sys.exit(f"Пользователь «{OWNER}» не найден. Сначала зарегистрируйтесь на сайте.")
+        sys.exit(f"Пользователь «{OWNER}» не найден. Сначала зарегистрируйтесь на сайте "
+                 f"или запустите без имени (автор будет «{DEFAULT_OWNER}»).")
 
-    # Повторный запуск заменяет только эти маршруты (по названию), остальные не трогает
-    for r in ROUTES:
-        for row in db.execute("SELECT id FROM routes WHERE author_id = ? AND title = ?",
-                              (author_id, r["title"])).fetchall():
-            remove_route_images(row["id"])
-            db.execute("DELETE FROM routes WHERE id = ?", (row["id"],))
+    try:
+        # Снаряжение: список заменяется целиком
+        db.execute("DELETE FROM gear_items")
+        db.executemany(
+            "INSERT INTO gear_items (name, category, season, terrain, min_days) "
+            "VALUES (?, ?, ?, ?, ?)", GEAR)
 
-    # Просмотры задаём по убыванию, чтобы на главной маршруты шли в том же порядке, что в списке
-    for idx, r in enumerate(ROUTES):
-        data = {**DEFAULTS, **r, "author_id": author_id, "is_public": 1,
-                "views": (len(ROUTES) - idx) * 42}
-        cur = db.execute(
-            """INSERT INTO routes
-               (author_id, title, region, length_km, difficulty, days, season, terrain,
-                description, restrictions, source_url, source_checked, open_from, open_to,
-                is_public, surface, max_slope, has_steps, rest_points, views, kind, is_closed)
-               VALUES (:author_id, :title, :region, :length_km, :difficulty, :days, :season,
-                :terrain, :description, :restrictions, :source_url, :source_checked, :open_from,
-                :open_to, :is_public, :surface, :max_slope, :has_steps, :rest_points, :views,
-                :kind, :is_closed)""",
-            data,
-        )
-        route_id = cur.lastrowid
-        # Линия маршрута (path) и названные места (place)
-        db.executemany(
-            "INSERT INTO route_points (route_id, position, kind, lat, lon) VALUES (?, ?, 'path', ?, ?)",
-            [(route_id, i, lat, lon) for i, (lat, lon) in enumerate(r.get("points", []))],
-        )
-        db.executemany(
-            "INSERT INTO route_points (route_id, position, kind, lat, lon, name, note) "
-            "VALUES (?, ?, 'place', ?, ?, ?, ?)",
-            [(route_id, i, p["lat"], p["lon"], p["name"], p.get("note"))
-             for i, p in enumerate(r.get("places", []))],
-        )
-        copy_cover(route_id, r.get("photo"))
-    db.commit()
-    print("Готово: снаряжение", len(GEAR), "шт., маршрутов", len(ROUTES))
+        # Повторный запуск заменяет только эти маршруты (по названию), остальные не трогает
+        for r in ROUTES:
+            for row in db.execute("SELECT id FROM routes WHERE author_id = ? AND title = ?",
+                                  (author_id, r["title"])).fetchall():
+                remove_route_images(row["id"])
+                db.execute("DELETE FROM routes WHERE id = ?", (row["id"],))  # точки и фото уйдут каскадом
+
+        covers = []  # (id маршрута, ключ обложки): копируем файлы только после успешной записи в базу
+        for idx, r in enumerate(ROUTES):
+            # Просмотры по убыванию, чтобы на главной порядок совпадал с порядком в файле
+            data = {**DEFAULTS, **r, "author_id": author_id, "is_public": 1,
+                    "views": (len(ROUTES) - idx) * 42}
+            route_id = db.execute(
+                """INSERT INTO routes
+                   (author_id, title, region, length_km, difficulty, days, season, terrain,
+                    description, restrictions, source_url, source_checked, open_from, open_to,
+                    is_public, surface, max_slope, has_steps, rest_points, views, kind, is_closed)
+                   VALUES (:author_id, :title, :region, :length_km, :difficulty, :days, :season,
+                    :terrain, :description, :restrictions, :source_url, :source_checked,
+                    :open_from, :open_to, :is_public, :surface, :max_slope, :has_steps,
+                    :rest_points, :views, :kind, :is_closed)""",
+                data,
+            ).lastrowid
+
+            # Линия маршрута (path) и названные места (place)
+            db.executemany(
+                "INSERT INTO route_points (route_id, position, kind, lat, lon) "
+                "VALUES (?, ?, 'path', ?, ?)",
+                [(route_id, i, lat, lon) for i, (lat, lon) in enumerate(r.get("points", []))],
+            )
+            db.executemany(
+                "INSERT INTO route_points (route_id, position, kind, lat, lon, name, note) "
+                "VALUES (?, ?, 'place', ?, ?, ?, ?)",
+                [(route_id, i, p["lat"], p["lon"], p["name"], p.get("note"))
+                 for i, p in enumerate(r.get("places", []))],
+            )
+            covers.append((route_id, r.get("photo")))
+            print(f"  + {r['title']}: линия {len(r.get('points', []))} т., "
+                  f"мест {len(r.get('places', []))}")
+        db.commit()
+    except Exception:
+        db.rollback()  # при ошибке в базе не остаётся половины данных
+        raise
+
+    for route_id, key in covers:
+        copy_cover(route_id, key)
+    print(f"Готово: снаряжение {len(GEAR)} шт., маршрутов {len(ROUTES)}, автор «{OWNER}».")
