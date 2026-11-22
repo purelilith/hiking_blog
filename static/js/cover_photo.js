@@ -1,3 +1,5 @@
+/* Обложка маршрута в форме: предпросмотр выбранного файла и проверка типа и размера
+   до отправки (сервер всё равно проверяет файл ещё раз). */
 (function () {
   var input = document.getElementById("photo");
   var preview = document.getElementById("photo-preview");
@@ -5,10 +7,11 @@
   var removeCheck = document.getElementById("remove-photo");
   if (!input || !preview) return;
 
-  var MAX = 5 * 1024 * 1024;
+  var MAX = 5 * 1024 * 1024;  // 5 МБ, как на сервере
   var initialSrc = preview.getAttribute("src") || "";
   var objectUrl = null;
 
+  /* Показывает картинку в предпросмотре или прячет его, если src пустой */
   function show(src) {
     if (src) { preview.src = src; preview.hidden = false; }
     else { preview.removeAttribute("src"); preview.hidden = true; }

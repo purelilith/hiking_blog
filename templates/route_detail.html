@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{# Страница маршрута: описание, сроки и источник, паспорт доступности, карта, чек-лист #}
 {% block main_class %}page detail{% endblock %}
 {% block title %}{{ route['title'] }}{% endblock %}
 {% block head %}
@@ -8,7 +9,7 @@
 {% block content %}
   <a class="back-link" id="back-link" href="{{ url_for('routes.catalog') }}">← Назад</a>
   <h1>{{ route['title'] }}</h1>
-    <ul class="tags" aria-label="Метки маршрута">
+  <ul class="tags" aria-label="Метки маршрута">
     {% for cls, text in route_badges(route) %}<li class="tag tag--{{ cls }}">{{ text }}</li>{% endfor %}
   </ul>
   {% if route['kind'] != 'curated' %}
@@ -24,14 +25,17 @@
   </ul>
   <p class="byline">Автор: {{ route['username'] }}{% if route['kind'] != 'curated' %} · Просмотров: {{ route['views'] }}{% endif %}{% if not route['is_public'] %} · приватный маршрут, виден только вам{% endif %}</p>
 
+  {# Кнопки управления видны только автору маршрута #}
   {% if g.user and g.user['id'] == route['author_id'] %}
     <section class="manage" aria-label="Управление маршрутом">
       <a class="btn" href="{{ url_for('routes.edit', route_id=route['id']) }}">Редактировать</a>
       <form method="post" action="{{ url_for('routes.toggle_visibility', route_id=route['id']) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">{{ 'Сделать приватным' if route['is_public'] else 'Сделать публичным' }}</button>
       </form>
       <form method="post" action="{{ url_for('routes.delete', route_id=route['id']) }}"
             onsubmit="return confirm('Удалить маршрут насовсем?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Удалить</button>
       </form>
     </section>
@@ -65,7 +69,7 @@
     </dl>
   </section>
 
-    <section class="card">
+  <section class="card">
     <h2>Карта маршрута</h2>
     <div id="map" role="region" data-points='{{ points | tojson }}' data-places='{{ places | tojson }}' aria-label="Карта маршрута"></div>
     {% if places %}
@@ -83,6 +87,7 @@
     </details>
   </section>
 
+  {# Чек-лист: отметки хранятся в браузере (скрипт ниже), на сервер не отправляются #}
   <section class="card" id="gear-section" data-route-id="{{ route['id'] }}">
     <h2>Чек-лист: что взять с собой</h2>
     <p class="gear-progress" id="gear-progress" role="status"></p>
@@ -110,6 +115,8 @@
     <script src="{{ url_for('static', filename='js/route_map.js') }}?v=3"></script>
     <script src="{{ url_for('static', filename='js/back.js') }}?v=1" defer></script>
     <script>
+    /* Чек-лист снаряжения: запоминает отметки в localStorage отдельно для каждого маршрута
+       и показывает, сколько вещей собрано. */
     (function () {
       var sec = document.getElementById("gear-section");
       var prog = document.getElementById("gear-progress");
@@ -119,6 +126,7 @@
       var saved = {};
       try { saved = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) {}
 
+      /* Считает отмеченное, обновляет подпись и сохраняет отметки */
       function update() {
         var done = 0;
         checks.forEach(function (c) {

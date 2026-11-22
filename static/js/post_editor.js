@@ -1,3 +1,6 @@
+/* Редактор описания маршрута: текстовые и фото-блоки, которые можно двигать.
+   При отправке формы блоки собираются в один текст, а на месте фото ставится метка [фото:N].
+   Фото загружаются на сервер отдельным запросом (адрес в data-upload-url). */
 (function () {
   var box = document.getElementById("post-editor");
   if (!box) return;
@@ -6,17 +9,19 @@
   var hidden = document.getElementById("description");
   var form = hidden.form;
   var csrf = form.querySelector('input[name="csrf_token"]');
-  var MAX = 5 * 1024 * 1024;
-  var seq = 0;
-  var known = {};
+  var MAX = 5 * 1024 * 1024;  // 5 МБ, как на сервере
+  var seq = 0;                // счётчик для уникальных id полей
+  var known = {};             // уже загруженные фото по id (из data-photos)
   try { JSON.parse(box.dataset.photos || "[]").forEach(function (p) { known[p.id] = p; }); } catch (e) {}
 
+  /* Создаёт элемент: el("button", {className: "btn"}, "Текст") */
   function el(tag, props, text) {
     var n = document.createElement(tag);
     Object.keys(props || {}).forEach(function (k) { n[k] = props[k]; });
     if (text) { n.textContent = text; }
     return n;
   }
+  /* Маленькая кнопка с атрибутом-меткой (data-up, data-down, data-del) */
   function small(label, flag) {
     var b = el("button", { type: "button", className: "btn btn-small" }, label);
     b.setAttribute(flag, "");
@@ -35,6 +40,7 @@
     });
   }
 
+  /* Пустой блок с кнопками «Выше», «Ниже», «Убрать»; kind: "text" или "photo" */
   function makeBlock(kind) {
     var block = el("div", { className: "post-block" });
     block.dataset.kind = kind;
@@ -62,6 +68,7 @@
     return block;
   }
 
+  /* Добавляет текстовый блок */
   function addText(value, focus) {
     var block = makeBlock("text");
     var id = "post-text-" + (++seq);
@@ -72,12 +79,14 @@
     if (focus) { ta.focus(); }
   }
 
+  /* Показывает уже загруженное фото с подписью */
   function showUploaded(body, p) {
     body.innerHTML = "";
     body.append(el("img", { src: p.url, alt: p.caption, className: "post-thumb" }),
                 el("p", { className: "post-caption" }, "Подпись: " + p.caption));
   }
 
+  /* Показывает форму загрузки фото: выбор файла, подпись и кнопка */
   function showUploader(block, body) {
     var n = ++seq;
     var file = el("input", { id: "post-file-" + n, type: "file",
@@ -86,7 +95,7 @@
     var go = el("button", { type: "button", className: "btn btn-small" }, "Загрузить фото");
     var msg = el("p", { className: "hint" });
     msg.setAttribute("role", "status");
-        var prev = el("img", { className: "post-thumb", alt: "Предпросмотр выбранного фото" });
+    var prev = el("img", { className: "post-thumb", alt: "Предпросмотр выбранного фото" });
     prev.hidden = true;
     var url = null;
     file.addEventListener("change", function () {
@@ -100,8 +109,10 @@
                 el("label", { htmlFor: cap.id }, "2. Опишите, что на фото (это подпись и текст для незрячих)"), cap,
                 go, msg);
 
+    /* Enter в подписи загружает фото, а не отправляет всю форму */
     cap.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } });
-        /* Загрузка; возвращает Promise: true, если фото загружено */
+
+    /* Загрузка; возвращает Promise: true, если фото загружено */
     function doUpload() {
       var f = file.files && file.files[0], c = cap.value.trim();
       if (!f) { msg.textContent = "Сначала выберите фото."; file.focus(); return Promise.resolve(false); }
@@ -137,6 +148,7 @@
     });
   }
 
+  /* Добавляет фото-блок: с готовым фото или с формой загрузки */
   function addPhoto(photo, focus) {
     var block = makeBlock("photo");
     var body = el("div", { className: "post-photo-body" });
@@ -149,7 +161,6 @@
   document.getElementById("add-text-block").addEventListener("click", function () { addText("", true); });
   document.getElementById("add-photo-block").addEventListener("click", function () { addPhoto(null, true); });
 
-  /* Собираем текст и метки [фото:N] из блоков при отправке формы */
   var submitError = document.getElementById("submit-error");
   var sending = false;
 
@@ -164,6 +175,8 @@
     }
   }
 
+  /* При отправке формы: докачиваем незагруженные фото, затем собираем текст и метки [фото:N]
+     из блоков в скрытое поле description */
   form.addEventListener("submit", function (e) {
     if (submitError) { submitError.hidden = true; }
     holder.querySelectorAll(".post-block--error").forEach(function (b) { b.classList.remove("post-block--error"); });

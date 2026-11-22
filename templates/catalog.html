@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{# Каталог маршрутов: фильтры, сортировка, список и страницы #}
 {% block main_class %}wide{% endblock %}
 {% block title %}Каталог маршрутов{% endblock %}
 {% block content %}
+  {# Выпадающий список фильтра; значение 'any' не показываем: вместо него пункт «Любой» #}
   {% macro select(name, label, options) %}
     <div class="field">
       <label for="{{ name }}">{{ label }}</label>

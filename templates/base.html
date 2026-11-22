@@ -1,3 +1,5 @@
+{# Общий каркас всех страниц: шапка, меню, панель настроек, сообщения, подвал.
+   Блоки для страниц: title, head, main_class, content, scripts. -#}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -9,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=4">
+  {# Без defer: тема и размер шрифта применяются до отрисовки страницы #}
   <script src="{{ url_for('static', filename='js/a11y.js') }}?v=2"></script>
   {% block head %}{% endblock %}
 </head>
@@ -16,6 +19,7 @@
   {% include "_icons.html" %}
   <a class="skip-link" href="#content">Перейти к содержимому</a>
 
+  {# Имя текущей страницы: по нему в меню подсвечивается нужный пункт #}
   {% set ep = request.endpoint %}
   <header class="site-header">
     <div class="header-inner">
@@ -39,6 +43,7 @@
           <a class="btn btn-small" href="{{ url_for('auth.login') }}">Вход</a>
         {% endif %}
 
+        {# Панель настроек отображения (работает через static/js/a11y.js) #}
         <div class="settings">
           <button type="button" class="settings-btn" id="settings-btn"
                   aria-expanded="false" aria-controls="settings-panel" aria-label="Настройки отображения и доступности">
@@ -70,6 +75,7 @@
   </header>
 
   <main id="content" class="{% block main_class %}page{% endblock %}" tabindex="-1">
+    {# Сообщения, которые приложение показывает через flash() #}
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <div class="flash-wrap">

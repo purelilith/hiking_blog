@@ -1,10 +1,24 @@
+"""Начальные данные: чек-лист снаряжения и примеры маршрутов.
+
+Запуск: python seed.py [ИМЯ]
+Маршруты записываются на пользователя ИМЯ (чтобы вы могли править их на сайте);
+без имени используется служебный пользователь catalog.
+Если рядом лежит seed_data.json, маршруты берутся из него, а не из списка ROUTES ниже.
+"""
+import glob
+import json
+import os
 import secrets
+import shutil
+import sys
+
 from werkzeug.security import generate_password_hash
+
 from app import app
 from db import get_db
-from views.routes import path_length_km
-import glob, os, shutil, sys, json
 
+# Снаряжение: (название, категория, сезон, местность, с какого числа дней нужно)
+# Сезон и местность 'any' значат «подходит всегда»
 GEAR = [
     ("Рюкзак по размеру", "Основное", "any", "any", 1),
     ("Бутылка с питьевой водой", "Вода и еда", "any", "any", 1),
@@ -47,14 +61,13 @@ GEAR = [
 
 # ---- Настройки ----
 # Фото обложек лежат в seed_photos/ (valdai.jpg, baikal.jpg, sestroretsk.jpg, iremel.jpg).
-# Маршруты записываются на пользователя из команды: python seed.py ИМЯ
-# (тогда вы сможете их править на сайте). Без имени используется служебный пользователь catalog.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHOTO_DIR = os.path.join(BASE_DIR, "seed_photos")
 ROUTE_IMG_DIR = os.path.join(BASE_DIR, "static", "img", "routes")
 OWNER = sys.argv[1] if len(sys.argv) > 1 else "catalog"
 CHECKED = "2026-11-22"  # дата, когда проверены источники
 
+# Запасной список маршрутов (используется, только если нет seed_data.json).
 # length_km взята из источников. Линии маршрута нет: нарисуйте её на сайте через «Редактировать».
 ROUTES = [
     {
@@ -169,11 +182,13 @@ ROUTES = [
     },
 ]
 
+# Если есть seed_data.json (его создаёт export_routes.py), берём маршруты оттуда
 JSON_PATH = os.path.join(BASE_DIR, "seed_data.json")
 if os.path.exists(JSON_PATH):
     with open(JSON_PATH, encoding="utf-8") as f:
         ROUTES = json.load(f)
 
+# Значения для полей, которых нет в описании маршрута
 DEFAULTS = {
     "restrictions": None, "source_url": None, "source_checked": None, "open_from": None,
     "open_to": None, "surface": None, "max_slope": None, "has_steps": 0, "rest_points": None,
@@ -182,6 +197,7 @@ DEFAULTS = {
 
 
 def remove_route_images(route_id):
+    """Удаляет старую обложку маршрута из static/img/routes."""
     for f in glob.glob(os.path.join(ROUTE_IMG_DIR, f"{route_id}.*")):
         os.remove(f)
 
@@ -201,14 +217,14 @@ def copy_cover(route_id, key):
 with app.app_context():
     db = get_db()
 
-    # Снаряжение
+    # Снаряжение: список заменяется целиком
     db.execute("DELETE FROM gear_items")
     db.executemany(
         "INSERT INTO gear_items (name, category, season, terrain, min_days) VALUES (?, ?, ?, ?, ?)",
         GEAR,
     )
 
-    # Автор маршрутов
+    # Автор маршрутов: пользователь из команды или служебный catalog (создаётся при необходимости)
     user = db.execute("SELECT id FROM users WHERE username = ?", (OWNER,)).fetchone()
     if user is not None:
         author_id = user["id"]
@@ -227,6 +243,7 @@ with app.app_context():
             remove_route_images(row["id"])
             db.execute("DELETE FROM routes WHERE id = ?", (row["id"],))
 
+    # Просмотры задаём по убыванию, чтобы на главной маршруты шли в том же порядке, что в списке
     for idx, r in enumerate(ROUTES):
         data = {**DEFAULTS, **r, "author_id": author_id, "is_public": 1,
                 "views": (len(ROUTES) - idx) * 42}
@@ -242,6 +259,7 @@ with app.app_context():
             data,
         )
         route_id = cur.lastrowid
+        # Линия маршрута (path) и названные места (place)
         db.executemany(
             "INSERT INTO route_points (route_id, position, kind, lat, lon) VALUES (?, ?, 'path', ?, ?)",
             [(route_id, i, lat, lon) for i, (lat, lon) in enumerate(r.get("points", []))],

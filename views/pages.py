@@ -1,3 +1,4 @@
+"""Общие страницы: главная, «О проекте» и подгрузка популярных маршрутов."""
 from flask import Blueprint, jsonify, render_template, request
 
 from db import get_db
@@ -7,9 +8,14 @@ PAGE = 5  # сколько маршрутов показывать за раз
 
 
 def popular(offset):
-    """Следующие PAGE публичных маршрутов по просмотрам и признак, что есть ещё."""
+    """Следующие PAGE публичных маршрутов по просмотрам и признак, что есть ещё.
+
+    Проверенные маршруты (curated) идут первыми. Берём на один маршрут больше,
+    чтобы узнать, есть ли следующая порция, не делая второго запроса.
+    """
     rows = get_db().execute(
-        "SELECT * FROM routes WHERE is_public = 1 ORDER BY (kind = 'curated') DESC, views DESC, id DESC LIMIT ? OFFSET ?",
+        "SELECT * FROM routes WHERE is_public = 1 "
+        "ORDER BY (kind = 'curated') DESC, views DESC, id DESC LIMIT ? OFFSET ?",
         (PAGE + 1, offset),
     ).fetchall()
     return rows[:PAGE], len(rows) > PAGE
@@ -23,6 +29,7 @@ def index():
 
 @bp.route("/popular")
 def popular_more():
+    """Отдаёт карточки следующей порции маршрутов в JSON (кнопка «Смотреть ещё», home.js)."""
     try:
         offset = max(0, int(request.args.get("offset", "0")))
     except ValueError:

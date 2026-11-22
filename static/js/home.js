@@ -1,3 +1,4 @@
+/* Главная страница: подгонка заголовка и кнопка «Смотреть ещё». */
 (function () {
   /* 1. Растягиваем «РОССИИ» на всю ширину текстового блока */
   function fitHero() {
@@ -14,8 +15,7 @@
     }
     if (stage) stage.classList.add("is-fit");
   }
-  /* Считаем размер, когда шрифт Gehaks реально загружен
-     (раньше ждали несуществующий Manomakh и мерили запасным шрифтом) */
+  /* Считаем размер, когда шрифт Gehaks реально загружен */
   if (document.fonts && document.fonts.load) {
     document.fonts.load('100px "Gehaks"', "Россия").then(fitHero, fitHero);
     document.fonts.ready.then(fitHero);
@@ -28,7 +28,8 @@
     if (st) st.classList.add("is-fit");
   }, 1500);
 
-  /* 2. Кнопка «Смотреть ещё» */
+  /* 2. Кнопка «Смотреть ещё»: подгружает следующие карточки с сервера (/popular).
+     Если запрос не удался, кнопка работает как обычная ссылка на каталог. */
   var btn = document.getElementById("load-more");
   var list = document.getElementById("popular-list");
   var status = document.getElementById("load-status");
@@ -42,6 +43,7 @@
       .then(function (data) {
         var before = list.children.length;
         list.insertAdjacentHTML("beforeend", data.html);
+        // Фокус на первую новую карточку, чтобы клавиатура и скринридер продолжили оттуда
         var firstNew = list.children[before];
         if (firstNew && firstNew.querySelector("a")) {
           firstNew.querySelector("a").focus();

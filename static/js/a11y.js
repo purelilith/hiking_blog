@@ -1,9 +1,14 @@
+/* Настройки отображения: тема, повышенный контраст и размер шрифта.
+   Выбор хранится в localStorage и применяется сразу при загрузке страницы,
+   поэтому скрипт подключён в <head> без defer (чтобы не мигала тема). */
 (function () {
   var root = document.documentElement;
   root.classList.add("js");
+  /* Значения по умолчанию; state — текущие настройки */
   var DEFAULTS = { size: 100, contrast: "normal", theme: "light" };
   var state = Object.assign({}, DEFAULTS);
 
+  /* Читаем сохранённое и принимаем только допустимые значения */
   try {
     var saved = JSON.parse(localStorage.getItem("tropa_prefs") || "{}");
     if (saved.size >= 85 && saved.size <= 150) state.size = Number(saved.size);
@@ -11,6 +16,7 @@
     if (saved.theme === "dark" || saved.theme === "light") state.theme = saved.theme;
   } catch (e) {}
 
+  /* Применяет настройки к <html> (на это опирается CSS) и сохраняет их */
   function apply() {
     root.style.fontSize = state.size + "%";
     root.dataset.contrast = state.contrast;
@@ -19,6 +25,7 @@
   }
   apply();
 
+  /* Панель настроек подключаем, когда вся разметка уже загружена */
   document.addEventListener("DOMContentLoaded", function () {
     var btn = document.getElementById("settings-btn");
     var panel = document.getElementById("settings-panel");
@@ -27,6 +34,7 @@
     var toggle = document.getElementById("contrast-toggle");
     var themeBtns = panel.querySelectorAll("[data-theme-val]");
 
+    /* Обновляет элементы панели по текущим настройкам */
     function refresh() {
       range.value = state.size;
       output.textContent = state.size + "%";
@@ -37,6 +45,7 @@
       apply();
     }
 
+    /* Открывает и закрывает панель, сообщая об этом скринридерам */
     function setOpen(open) {
       panel.hidden = !open;
       btn.setAttribute("aria-expanded", String(open));
@@ -47,6 +56,7 @@
       setOpen(panel.hidden);
     });
 
+    /* Escape закрывает панель и возвращает фокус на кнопку */
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && !panel.hidden) {
         setOpen(false);
@@ -54,6 +64,7 @@
       }
     });
 
+    /* Щелчок вне панели закрывает её */
     document.addEventListener("click", function (e) {
       if (!panel.hidden && !panel.contains(e.target) && !btn.contains(e.target)) {
         setOpen(false);

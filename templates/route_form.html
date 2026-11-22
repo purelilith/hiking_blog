@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# Форма создания и правки маршрута (editing=True при правке).
+   Скрипты внизу страницы: карта (map.js), обложка (cover_photo.js), редактор описания (post_editor.js). #}
 {% block title %}{{ 'Редактирование маршрута' if editing else 'Новый маршрут' }}{% endblock %}
 {% block head %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -25,11 +27,12 @@
     <label for="days">Дней в пути</label>
     <input id="days" name="days" type="number" min="1" max="30" required value="{{ form.get('days', 1) }}">
 
+    {# Выпадающие списки из справочников в views/routes.py #}
     {{ select("difficulty", "Сложность", difficulty) }}
     {{ select("season", "Лучший сезон", seasons) }}
     {{ select("terrain", "Тип местности", terrains) }}
 
-        <fieldset>
+    <fieldset>
       <legend>Фотография маршрута</legend>
       {% if editing and route_id %}
         <img id="photo-preview" class="photo-preview" src="{{ route_image(route_id) }}" alt="Текущее фото маршрута">
@@ -46,6 +49,7 @@
       <p id="photo-status" class="hint" role="status"></p>
     </fieldset>
 
+    {# Уже загруженные фото для редактора описания (передаются скрипту через data-photos) #}
     {% set plist = [] %}
     {% for p in photos %}
       {% set _ = plist.append({"id": p['id'], "url": url_for('static', filename='img/posts/' ~ p['filename']), "caption": p['caption']}) %}
@@ -76,7 +80,7 @@
       <input id="source_checked" name="source_checked" type="date" value="{{ form.get('source_checked', '') }}">
     </fieldset>
 
-        <fieldset>
+    <fieldset>
       <legend>Маршрут на карте</legend>
       <p>Сначала проведите линию маршрута (точек можно ставить сколько нужно, хоть на каждом повороте), потом отметьте названными местами важные локации: привалы, виды, ручьи.</p>
       <div class="mode-switch" role="radiogroup" aria-label="Что ставить по щелчку на карте">

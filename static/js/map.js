@@ -1,3 +1,5 @@
+/* Карта в форме маршрута: линия маршрута (точки по щелчку) и названные места.
+   Данные пишутся в скрытые поля points и places и уходят на сервер вместе с формой. */
 (function () {
   var pointsInput = document.getElementById("points");
   var placesInput = document.getElementById("places");
@@ -6,7 +8,7 @@
   var status = document.getElementById("point-status");
   var badge = document.getElementById("live-distance");
 
-  var points = [], places = [];
+  var points = [], places = [];  // points: [[lat, lon], ...]; places: [{lat, lon, name, note}, ...]
   try { points = JSON.parse(pointsInput.value || "[]"); } catch (e) {}
   try { places = JSON.parse(placesInput.value || "[]"); } catch (e) {}
 
@@ -15,9 +17,12 @@
   var dots = L.layerGroup().addTo(map);
   var pins = L.layerGroup().addTo(map);
 
+  /* Что ставим по щелчку: «path» (точка линии) или «place» (место с названием) */
   function mode() { return document.querySelector('input[name="map-mode"]:checked').value; }
+  /* Enter в полях списка не должен отправлять всю форму */
   function noEnter(e) { if (e.key === "Enter") { e.preventDefault(); } }
 
+  /* Длина линии в километрах (формула гаверсинусов, как на сервере) */
   function calcKm(pts) {
     var total = 0;
     for (var i = 1; i < pts.length; i++) {
@@ -38,6 +43,7 @@
                         " · Расчётная длина: " + calcKm(points) + " км";
   }
 
+  /* Перерисовывает линию, точки и метки мест на карте */
   function renderMap() {
     line.setLatLngs(points);
     dots.clearLayers();
@@ -95,12 +101,14 @@
     });
   }
 
+  /* Добавляет точку линии маршрута */
   function addPoint(lat, lon) {
     points.push([lat, lon]);
     renderMap();
     status.textContent = "Добавлена точка линии " + points.length + ".";
   }
 
+  /* Добавляет место: название спрашиваем сразу, заметку можно ввести потом в списке */
   function addPlace(lat, lon) {
     var def = "Место " + (places.length + 1);
     var name = window.prompt("Название места:", def);
@@ -111,10 +119,13 @@
     status.textContent = "Добавлено место «" + name + "». Название и заметку можно изменить в списке ниже.";
   }
 
+  /* Добавляет точку или место в зависимости от выбранного режима */
   function addAt(lat, lon) { if (mode() === "place") { addPlace(lat, lon); } else { addPoint(lat, lon); } }
 
+  /* Щелчок по карте */
   map.on("click", function (e) { addAt(e.latlng.lat, e.latlng.lng); });
 
+  /* Добавление по координатам из полей «Широта» и «Долгота» (запятая допустима) */
   function addByCoords() {
     var lat = parseFloat(document.getElementById("lat-input").value.replace(",", "."));
     var lon = parseFloat(document.getElementById("lon-input").value.replace(",", "."));
@@ -141,6 +152,7 @@
     status.textContent = "Линия очищена.";
   });
 
+  /* Первая отрисовка и показ всего маршрута целиком */
   buildList();
   renderMap();
   var all = points.concat(places.map(function (p) { return [p.lat, p.lon]; }));

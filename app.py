@@ -1,14 +1,17 @@
+"""Точка входа Tropa: создаёт Flask-приложение и подключает все разделы сайта."""
 import os
+
 from flask import Flask, flash, redirect, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
+
 import db
 from extensions import csrf, limiter, oauth
 
 
 def ru_days(n):
-    """1 день, 2 дня, 5 дней."""
+    """Число дней с правильным окончанием: 1 день, 2 дня, 5 дней."""
     n = int(n)
-    if 11 <= n % 100 <= 14:
+    if 11 <= n % 100 <= 14:  # 11–14 всегда «дней»
         word = "дней"
     elif n % 10 == 1:
         word = "день"
@@ -20,13 +23,20 @@ def ru_days(n):
 
 
 def create_app():
+    """Собирает приложение: настройки, база, защита, разделы и шаблонные помощники."""
     app = Flask(__name__)
     app.config.from_pyfile("config.py")
+
+    # Расширения: база, защита от CSRF, ограничение частоты запросов, OAuth
     db.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
     oauth.init_app(app)
-    if app.config.get("GOOGLE_CLIENT_ID") and app.config.get("GOOGLE_CLIENT_SECRET"):
+
+    # Вход через Google подключаем, только если заданы ключи в .env
+    google_enabled = bool(app.config.get("GOOGLE_CLIENT_ID")
+                          and app.config.get("GOOGLE_CLIENT_SECRET"))
+    if google_enabled:
         oauth.register(
             name="google",
             client_id=app.config["GOOGLE_CLIENT_ID"],
@@ -34,29 +44,35 @@ def create_app():
             server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
             client_kwargs={"scope": "openid email profile"},
         )
+
+    # Добавляем недостающие столбцы и таблицы в уже существующую базу
     with app.app_context():
         db.ensure_schema()
 
     @app.context_processor
     def inject_auth():
+        """Передаёт во все шаблоны флаг: показывать ли кнопку «Войти через Google»."""
         return {"google_enabled": bool(app.config.get("GOOGLE_CLIENT_ID")
                                        and app.config.get("GOOGLE_CLIENT_SECRET"))}
 
     @app.after_request
     def security_headers(resp):
+        """Защитные заголовки для каждого ответа."""
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         resp.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
-        if app.config.get("SESSION_COOKIE_SECURE"):
+        if app.config.get("SESSION_COOKIE_SECURE"):  # только когда сайт работает по HTTPS
             resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
         return resp
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_large_file(_err):
+        """Файл больше MAX_CONTENT_LENGTH: возвращаем на прошлую страницу с сообщением."""
         flash("Файл слишком большой. Максимальный размер фото — 5 МБ.")
         return redirect(request.referrer or url_for("routes.mine"))
 
+    # Разделы сайта (импорт здесь, чтобы избежать циклических импортов)
     from views import auth, pages, routes
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
@@ -70,6 +86,7 @@ def create_app():
                 return url_for("static", filename=rel)
         return url_for("static", filename="img/route-placeholder.png")
 
+    # Фильтры и переменные, доступные во всех шаблонах
     app.jinja_env.filters["ru_days"] = ru_days
     app.jinja_env.globals.update(
         route_image=route_image,
@@ -80,6 +97,7 @@ def create_app():
     return app
 
 
+# Объект, который ищет хостинг (и команда `flask --app app run`)
 app = create_app()
 
 if __name__ == "__main__":

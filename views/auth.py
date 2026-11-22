@@ -1,3 +1,4 @@
+"""Вход, регистрация, выход и вход через Google."""
 import functools
 import re
 import secrets
@@ -22,7 +23,10 @@ COMMON_PASSWORDS = {
 DUMMY_HASH = generate_password_hash("timing-dummy-password")
 
 
+# ---------- Вспомогательные функции ----------
+
 def validate_password(password, username):
+    """Возвращает текст ошибки или None, если пароль подходит."""
     if len(password) < 10:
         return "Пароль должен быть не короче 10 символов."
     if len(password) > 128:
@@ -42,14 +46,18 @@ def safe_next(target):
 
 
 def google_enabled():
+    """Заданы ли ключи Google в настройках."""
     return bool(current_app.config.get("GOOGLE_CLIENT_ID") and current_app.config.get("GOOGLE_CLIENT_SECRET"))
 
 
 def start_session(user_id):
+    """Начинает сессию пользователя (14 дней, см. PERMANENT_SESSION_LIFETIME)."""
     session.clear()  # против session fixation
     session["user_id"] = user_id
     session.permanent = True
 
+
+# ---------- Регистрация, вход и выход ----------
 
 @bp.route("/register", methods=("GET", "POST"))
 @limiter.limit("10 per hour", methods=["POST"])
@@ -92,7 +100,7 @@ def register():
 def login():
     if g.user:
         return redirect(url_for("pages.index"))
-    nxt = safe_next(request.values.get("next"))
+    nxt = safe_next(request.values.get("next"))  # куда вернуть после входа
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -100,6 +108,8 @@ def login():
             "SELECT * FROM users WHERE username = ? COLLATE NOCASE", (username,)
         ).fetchone()
 
+        # Хеш проверяем всегда (даже для несуществующего пользователя), чтобы по времени
+        # ответа нельзя было угадать, есть ли такое имя. У Google-аккаунтов хеш пустой.
         stored = user["password_hash"] if user else ""
         ok = check_password_hash(stored or DUMMY_HASH, password[:128])
         if user is None or not stored or not ok:
@@ -121,6 +131,7 @@ def logout():
 @bp.route("/google")
 @limiter.limit("20 per minute")
 def google_login():
+    """Отправляет пользователя на страницу входа Google."""
     if not google_enabled():
         flash("Вход через Google не настроен.")
         return redirect(url_for("auth.login"))
@@ -129,6 +140,7 @@ def google_login():
 
 
 def _unique_username(db, name):
+    """Подбирает свободное имя пользователя на основе имени из Google."""
     base = re.sub(r"[^\w.\-]", "", name or "")[:24] or "user"
     if len(base) < 3:
         base = base + "_user"
@@ -136,12 +148,13 @@ def _unique_username(db, name):
     for _ in range(10):
         if not db.execute("SELECT 1 FROM users WHERE username = ? COLLATE NOCASE", (candidate,)).fetchone():
             return candidate
-        candidate = f"{base}{secrets.randbelow(9000) + 1000}"
+        candidate = f"{base}{secrets.randbelow(9000) + 1000}"  # имя занято: добавляем число
     return f"user{secrets.token_hex(4)}"
 
 
 @bp.route("/google/callback")
 def google_callback():
+    """Google возвращает пользователя сюда: проверяем ответ, находим или создаём аккаунт."""
     if not google_enabled():
         return redirect(url_for("auth.login"))
     try:
@@ -151,7 +164,7 @@ def google_callback():
         return redirect(url_for("auth.login"))
 
     info = token.get("userinfo") or {}
-    sub, email = info.get("sub"), info.get("email")
+    sub, email = info.get("sub"), info.get("email")  # sub — постоянный id пользователя в Google
     if not sub or not email or not info.get("email_verified"):
         flash("Google не подтвердил адрес почты, вход невозможен.")
         return redirect(url_for("auth.login"))
@@ -159,6 +172,7 @@ def google_callback():
     db = get_db()
     user = db.execute("SELECT id FROM users WHERE google_sub = ?", (sub,)).fetchone()
     if user is None:
+        # Первый вход через Google: создаём аккаунт (несколько попыток на случай гонки имён)
         name = info.get("name") or email.split("@")[0]
         for _ in range(3):
             try:
@@ -182,8 +196,11 @@ def google_callback():
     return redirect(nxt or url_for("pages.index"))
 
 
+# ---------- Текущий пользователь и защита страниц ----------
+
 @bp.before_app_request
 def load_logged_in_user():
+    """Перед каждым запросом кладёт текущего пользователя в g.user (или None)."""
     user_id = session.get("user_id")
     g.user = None
     if user_id is not None:
@@ -191,10 +208,11 @@ def load_logged_in_user():
             "SELECT id, username FROM users WHERE id = ?", (user_id,)
         ).fetchone()
         if g.user is None:
-            session.clear()
+            session.clear()  # пользователя уже нет в базе
 
 
 def login_required(view):
+    """Декоратор: неавторизованных отправляет на вход и запоминает, куда вернуть."""
     @functools.wraps(view)
     def wrapped(**kwargs):
         if g.user is None:

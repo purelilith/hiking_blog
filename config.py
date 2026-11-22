@@ -1,4 +1,6 @@
+"""Настройки приложения. Значения можно переопределить в файле .env (см. README)."""
 import os
+import secrets
 from datetime import timedelta
 
 from dotenv import load_dotenv
@@ -12,7 +14,6 @@ def _load_secret_key():
     key = os.environ.get("SECRET_KEY")
     if key:
         return key
-    import secrets
     path = os.path.join(BASE_DIR, ".secret_key")
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
@@ -21,9 +22,9 @@ def _load_secret_key():
     with open(path, "w", encoding="utf-8") as f:
         f.write(key)
     try:
-        os.chmod(path, 0o600)
+        os.chmod(path, 0o600)  # читать ключ может только владелец
     except OSError:
-        pass
+        pass  # на некоторых системах (например, Windows) права не поддерживаются
     return key
 
 
@@ -37,11 +38,12 @@ MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 МБ на запрос
 # Cookie сессии
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SECURE = os.environ.get("COOKIE_SECURE") == "1"
+SESSION_COOKIE_SECURE = os.environ.get("COOKIE_SECURE") == "1"  # включать на хостинге с HTTPS
 PERMANENT_SESSION_LIFETIME = timedelta(days=14)
 
 # CSRF-токен живёт столько же, сколько сессия
 WTF_CSRF_TIME_LIMIT = None
 
+# Вход через Google (если пусто, кнопка на сайте скрыта)
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")

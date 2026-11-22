@@ -1,3 +1,5 @@
+/* Карта на странице маршрута: линия и места только для просмотра.
+   Данные берутся из атрибутов data-points и data-places элемента #map. */
 (function () {
   var el = document.getElementById("map");
   if (!el) return;
