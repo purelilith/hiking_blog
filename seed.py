@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash
 from app import app
 from db import get_db
 from views.routes import path_length_km
+import glob, os, shutil, sys
 
 GEAR = [
     ("Рюкзак по размеру", "Основное", "any", "any", 1),
@@ -44,114 +45,185 @@ GEAR = [
     ("Налобный фонарь с запасными батарейками", "Безопасность", "any", "any", 2),
 ]
 
+# ---- Настройки ----
+# Фото обложек лежат в seed_photos/ (valdai.jpg, baikal.jpg, sestroretsk.jpg, iremel.jpg).
+# Маршруты записываются на пользователя из команды: python seed.py ИМЯ
+# (тогда вы сможете их править на сайте). Без имени используется служебный пользователь catalog.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PHOTO_DIR = os.path.join(BASE_DIR, "seed_photos")
+ROUTE_IMG_DIR = os.path.join(BASE_DIR, "static", "img", "routes")
+OWNER = sys.argv[1] if len(sys.argv) > 1 else "catalog"
+CHECKED = "2026-11-22"  # дата, когда проверены источники
+
+# length_km взята из источников. Линии маршрута нет: нарисуйте её на сайте через «Редактировать».
 ROUTES = [
     {
-        "title": "Большая Валдайская тропа",
+        "photo": "valdai",
+        "title": "Большая Валдайская тропа (центральный участок)",
         "region": "Новгородская область",
-        "difficulty": "medium",
-        "days": 4,
-        "season": "spring_autumn",
-        "terrain": "forest",
-        "description": "Живописный лесной и озёрный маршрут по территории Валдайского национального парка. Тропа оборудована деревянными настилами, смотровыми площадками, информационными стендами и обустроенными стоянками у воды.",
-        "restrictions": "Требуется разрешение на посещение национального парка «Валдайский».",
-        "source_url": "https://valdaypark.ru",
-        "source_checked": "2026-10-15",
-        "open_from": "2026-05-01",
-        "open_to": "2026-11-01",
-        "surface": "Лесная тропа, деревянные настилы, грунт",
-        "max_slope": "Умеренный (до 12°)",
-        "has_steps": 1,
-        "rest_points": "Оборудованные базовые лагеря с беседками и настилами каждые 10–12 км",
-        "points": [[57.9742, 33.2528], [58.0215, 33.2890], [58.0890, 33.3412], [58.1520, 33.3980], [58.2105, 33.4310]],
+        "difficulty": "easy", "days": 4, "season": "summer", "terrain": "forest",
+        "length_km": 52,
+        "description": (
+            "Маркированный маршрут по территории национального парка «Валдайский». "
+            "По данным путеводителя на август 2026 года вся тропа составляет 77 км: 52 км центрального "
+            "участка и 25 км северного, старт у них общий, у информационного центра. Центральный участок "
+            "проходят за 3–5 дней. Каждый километр отмечен, оборудованные стоянки расположены через "
+            "12–14 км, по пути есть источники воды, но нет магазинов."
+        ),
+        "restrictions": (
+            "Нужны пропуск в национальный парк и билет на размещение на стоянках. По данным одного из "
+            "обзоров вход стоил 250 ₽ (цену уточняйте). Тропа доступна с мая по ноябрь, лучше идти "
+            "до конца сентября."
+        ),
+        "source_url": "https://t-j.ru/bolshaya-valdayskaya-tropa/",
+        "source_checked": CHECKED,
+        "open_from": "2026-05-01", "open_to": "2026-11-30",
+        "rest_points": "Оборудованные стоянки через каждые 12–14 км",
+        "places": [
+            {"name": "Валдай (ближайший город)", "lat": 57.9811, "lon": 33.2475,
+             "note": "Ориентир, координаты приблизительные."},
+            {"name": "Большая Валдайская тропа (ориентир из путеводителя)", "lat": 57.83369, "lon": 33.085895,
+             "note": "Координаты из путеводителя, уточните на карте."},
+        ],
     },
     {
+        "photo": "baikal",
         "title": "Большая Байкальская тропа: Листвянка — Большие Коты",
         "region": "Иркутская область",
-        "difficulty": "medium",
-        "days": 2,
-        "season": "summer",
-        "terrain": "mountain",
-        "description": "Классический участок вдоль берега Байкала через Прибайкальский национальный парк. Маршрут сочетает лесной серпантин с панорамными видами на озеро и скальные прижимы.",
-        "restrictions": "Оформление пропуска в ФГБУ «Заповедное Прибайкалье».",
-        "source_url": "https://baikaltrail.org",
-        "source_checked": "2026-09-20",
-        "open_from": "2026-05-15",
-        "open_to": "2026-10-15",
-        "surface": "Утоптанный грунт, каменистые участки",
-        "max_slope": "Крутой подъём на перевал Скрипер (до 20°)",
-        "has_steps": 1,
-        "rest_points": "Смотровые площадки и оборудованные стоянки в пади Сенная",
-        "points": [[51.8552, 104.8891], [51.8790, 104.9450], [51.9035, 105.0642]],
+        "difficulty": "medium", "days": 1, "season": "summer", "terrain": "mountain",
+        "length_km": 24,
+        "description": (
+            "Один из самых популярных и обустроенных участков Большой Байкальской тропы вдоль "
+            "юго-западного берега Байкала, на территории Прибайкальского национального парка. "
+            "Маршрут начинается в Листвянке с долгого подъёма примерно на 3,5 км, дальше идёт по "
+            "гребням и склонам с видами на озеро. Обычно проходится за один день. Источники называют "
+            "длину от 24 до 25 км."
+        ),
+        "restrictions": (
+            "ВНИМАНИЕ: в сентябре 2026 года нацпарк «Заповедное Прибайкалье» закрыл маршрут из-за "
+            "активности медведей; по сообщениям СМИ от 22.09.2026 он закрыт как минимум до середины "
+            "октября. Сообщений о повторном открытии на дату проверки не найдено: перед выходом "
+            "уточняйте статус на официальном сайте нацпарка. Для посещения участка в нацпарке нужно "
+            "заранее оформлять разрешение."
+        ),
+        "source_url": "https://www.kommersant.ru/doc/8936573",
+        "source_checked": CHECKED,
+        "surface": "Грунтовая тропа; бывает скользкой, особенно после заморозков",
+        "max_slope": "Долгий подъём (около 3,5 км) в начале маршрута",
+        "places": [
+            {"name": "Листвянка (старт)", "lat": 51.8667, "lon": 104.8333,
+             "note": "Ориентир, координаты приблизительные."},
+            {"name": "Большие Коты (финиш)", "lat": 51.9022, "lon": 105.0697,
+             "note": "Ориентир, координаты приблизительные."},
+        ],
     },
     {
+        "photo": "sestroretsk",
         "title": "Экотропа «Сестрорецкое болото»",
         "region": "Санкт-Петербург",
-        "difficulty": "easy",
-        "days": 1,
-        "season": "any",
-        "terrain": "water",
-        "description": "Доступный кольцевой маршрут по верховому болоту с широкими деревянными настилами. Отлично подходит для спокойной прогулки выходного дня всей семьёй и наблюдения за птицами.",
-        "restrictions": "Запрещён сход с деревянных настилов и разведение костров.",
-        "source_url": "https://oopt.spb.ru",
-        "source_checked": "2026-11-01",
-        "open_from": None,
-        "open_to": None,
-        "surface": "Ровный деревянный настил и утрамбованная лесная дорожка",
-        "max_slope": "Пологий (до 3°)",
-        "has_steps": 0,
-        "rest_points": "Смотровые вышки, скамейки вдоль настила каждые 500 метров",
-        "points": [[60.1235, 29.9942], [60.1289, 30.0021], [60.1320, 30.0095], [60.1245, 29.9960]],
+        "difficulty": "easy", "days": 1, "season": "any", "terrain": "water",
+        "length_km": 3.5,
+        "description": (
+            "Короткая экологическая тропа по государственному природному заказнику «Сестрорецкое "
+            "болото». Большая часть пути проложена по деревянным настилам на сваях, они чередуются с "
+            "участками лесной тропы по песчаным дюнам и древним береговым валам. Вдоль маршрута стоят "
+            "информационные стенды и смотровые площадки. Источники называют длину от 3 до 3,5 км."
+        ),
+        "restrictions": (
+            "Вход бесплатный. Не сходите с настила и тропы: вокруг топкое болото, отклоняться от "
+            "маршрута опасно. В заказнике встречаются гадюки."
+        ),
+        "source_url": "https://travel.yandex.ru/journal/sestroretsk/",
+        "source_checked": CHECKED,
+        "surface": "Деревянные настилы на сваях и участки лесной тропы по сухим дюнам",
+        "has_steps": 1,
+        "rest_points": "Смотровые площадки",
+        "places": [
+            {"name": "Белоостров (рядом начало тропы)", "lat": 60.15, "lon": 30.0,
+             "note": "Ориентир, координаты приблизительные."},
+        ],
     },
     {
-        "title": "Восхождение на гору Большой Иремель",
+        "photo": "iremel",
+        "title": "Большой Иремель (природный парк «Иремель»)",
         "region": "Республика Башкортостан",
-        "difficulty": "hard",
-        "days": 2,
-        "season": "summer",
-        "terrain": "mountain",
-        "description": "Маршрут на вторую по высоте вершину Южного Урала через тайгу, зону криволесья и обширные курумники на предвершинном плато.",
-        "restrictions": "Регистрация на КПП природного парка «Иремель».",
-        "source_url": "https://iremel-park.ru",
-        "source_checked": "2026-08-18",
-        "open_from": None,
-        "open_to": None,
-        "surface": "Лесная дорога, корни, крупный курумник",
-        "max_slope": "Крутой (до 28° на финальном взлёте)",
-        "has_steps": 0,
-        "rest_points": "Оборудованные стоянки у подножия и на границе леса",
-        "points": [[54.4810, 58.7720], [54.5025, 58.8110], [54.5198, 58.8425]],
+        "difficulty": "medium", "days": 2, "season": "any", "terrain": "mountain",
+        "length_km": 25,
+        "description": (
+            "Вторая по высоте вершина Южного Урала, 1582 м, в центре природного парка «Иремель». "
+            "Маршрут от села Тюлюк около 25 км по описанию. Туристические агентства организуют поездки "
+            "на внедорожниках до КПП, дальше до вершины около 8 км пешком. В парке обитают медведи: "
+            "зимой они спят, летом стараются не встречаться с людьми."
+        ),
+        "restrictions": (
+            "Посетителям разрешено находиться только в туристической зоне и на территории палаточных "
+            "лагерей; в остальных зонах парка находиться запрещено. Правила посещения, плату и "
+            "регистрацию уточняйте на официальном сайте парка."
+        ),
+        "source_url": "https://www.sportmaster.ru/media/articles/turisticheskie-pohody-v-gory-urala-vershina-iremel/",
+        "source_checked": CHECKED,
+        "places": [
+            {"name": "Большой Иремель (вершина, 1582 м)", "lat": 54.52, "lon": 58.84,
+             "note": "Ориентир, координаты приблизительные."},
+        ],
     },
 ]
 
 DEFAULTS = {
-    "restrictions": None, "source_url": None, "source_checked": None,
-    "open_from": None, "open_to": None, "surface": None, "max_slope": None,
-    "has_steps": 0, "rest_points": None,
+    "restrictions": None, "source_url": None, "source_checked": None, "open_from": None,
+    "open_to": None, "surface": None, "max_slope": None, "has_steps": 0, "rest_points": None,
 }
+
+
+def remove_route_images(route_id):
+    for f in glob.glob(os.path.join(ROUTE_IMG_DIR, f"{route_id}.*")):
+        os.remove(f)
+
+
+def copy_cover(route_id, key):
+    """Копирует seed_photos/<key>.jpg в static/img/routes/<номер маршрута>.jpg."""
+    for ext in ("jpg", "jpeg", "png", "webp"):
+        src = os.path.join(PHOTO_DIR, f"{key}.{ext}")
+        if os.path.exists(src):
+            os.makedirs(ROUTE_IMG_DIR, exist_ok=True)
+            shutil.copyfile(src, os.path.join(ROUTE_IMG_DIR, f"{route_id}.{ext}"))
+            return True
+    print(f"  нет фото seed_photos/{key}.jpg (будет заглушка)")
+    return False
+
 
 with app.app_context():
     db = get_db()
+
+    # Снаряжение
     db.execute("DELETE FROM gear_items")
     db.executemany(
         "INSERT INTO gear_items (name, category, season, terrain, min_days) VALUES (?, ?, ?, ?, ?)",
         GEAR,
     )
 
-    user = db.execute("SELECT id FROM users WHERE username = 'catalog'").fetchone()
-    if user is None:
+    # Автор маршрутов
+    user = db.execute("SELECT id FROM users WHERE username = ?", (OWNER,)).fetchone()
+    if user is not None:
+        author_id = user["id"]
+    elif OWNER == "catalog":
         author_id = db.execute(
             "INSERT INTO users (username, password_hash) VALUES ('catalog', ?)",
             (generate_password_hash(secrets.token_urlsafe(32)),),
         ).lastrowid
     else:
-        author_id = user["id"]
+        sys.exit(f"Пользователь «{OWNER}» не найден. Сначала зарегистрируйтесь на сайте.")
 
-    db.execute("DELETE FROM routes WHERE author_id = ?", (author_id,))
+    # Повторный запуск заменяет только эти маршруты (по названию), остальные не трогает
+    for r in ROUTES:
+        for row in db.execute("SELECT id FROM routes WHERE author_id = ? AND title = ?",
+                              (author_id, r["title"])).fetchall():
+            remove_route_images(row["id"])
+            db.execute("DELETE FROM routes WHERE id = ?", (row["id"],))
+
     for idx, r in enumerate(ROUTES):
-        data = {
-            **DEFAULTS, **r, "author_id": author_id,
-            "length_km": path_length_km(r["points"]), "is_public": 1,
-        }
+        data = {**DEFAULTS, **r, "author_id": author_id, "is_public": 1,
+                "views": (len(ROUTES) - idx) * 42}
         cur = db.execute(
             """INSERT INTO routes
                (author_id, title, region, length_km, difficulty, days, season, terrain,
@@ -160,11 +232,15 @@ with app.app_context():
                VALUES (:author_id, :title, :region, :length_km, :difficulty, :days, :season,
                 :terrain, :description, :restrictions, :source_url, :source_checked, :open_from,
                 :open_to, :is_public, :surface, :max_slope, :has_steps, :rest_points, :views)""",
-            {**data, "views": (len(ROUTES) - idx) * 42},
+            data,
         )
+        route_id = cur.lastrowid
         db.executemany(
-            "INSERT INTO route_points (route_id, position, lat, lon) VALUES (?, ?, ?, ?)",
-            [(cur.lastrowid, i, lat, lon) for i, (lat, lon) in enumerate(r["points"])],
+            "INSERT INTO route_points (route_id, position, kind, lat, lon, name, note) "
+            "VALUES (?, ?, 'place', ?, ?, ?, ?)",
+            [(route_id, i, p["lat"], p["lon"], p["name"], p.get("note"))
+             for i, p in enumerate(r.get("places", []))],
         )
+        copy_cover(route_id, r.get("photo"))
     db.commit()
-    print("Готово: снаряжение", len(GEAR), "шт., маршрутов каталога", len(ROUTES))
+    print("Готово: снаряжение", len(GEAR), "шт., маршрутов", len(ROUTES))
