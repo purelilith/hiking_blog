@@ -19,12 +19,46 @@ import sys
 
 from werkzeug.security import generate_password_hash
 
+# Windows-консоль в старой кодировке не должна ронять скрипт из-за символов вроде «—»
+try:
+    sys.stdout.reconfigure(errors="replace")
+    sys.stderr.reconfigure(errors="replace")
+except (AttributeError, ValueError):
+    pass
+
 from app import app
 from db import get_db
 
 # Под этим именем в каталоге будут показаны маршруты, если запустить `python seed.py` без имени.
 # Можно заменить на свой ник (3–32 символа: буквы, цифры, «.», «_», «-»).
 DEFAULT_OWNER = "catalog"
+
+# Паспорт доступности. Значения подставляются, только если в seed_data.json поле пустое
+# (так данные не теряются, даже если файл выгрузили с пустыми полями). Ключ — название маршрута.
+# Здесь только то, что известно из источников; чего нет, лучше оставить пустым, чем придумать.
+PASSPORT = {
+    'Большая Валдайская тропа (центральный участок)': {
+        "rest_points": "Оборудованные стоянки через каждые 12–14 км",
+    },
+    'Большая Байкальская тропа: Листвянка — Большие Коты': {
+        "surface": "Грунтовая тропа; бывает скользкой, особенно после заморозков",
+        "max_slope": "Долгий подъём (около 3,5 км) в начале маршрута",
+    },
+    'Экотропа «Сестрорецкое болото»': {
+        "surface": "Деревянные настилы на сваях и участки лесной тропы по сухим дюнам",
+        "has_steps": 1,
+        "rest_points": "Смотровые площадки",
+    },
+    'Большой Иремель (природный парк «Иремель»)': {
+        "surface": "Лесная тропа, выше горная тундра; на подъёме курумник (каменная россыпь), "
+                   "камни помечены краской",
+        "max_slope": "Самый трудный участок: подъём по курумнику к вершине; "
+                     "цифры уклона в источниках не указаны",
+        "has_steps": 1,  # ступеней нет, но камни и россыпь делают путь непригодным для «без ступенек»
+        "rest_points": "Кордон (КПП) природного парка перед пешим подъёмом; "
+                       "обустроенные места отдыха на тропе в источниках не названы",
+    },
+}
 
 # Снаряжение: (название, категория, сезон, местность, с какого числа дней нужно)
 # Сезон и местность 'any' значат «подходит всегда»
@@ -92,16 +126,22 @@ def load_routes():
     if not os.path.exists(JSON_PATH):
         sys.exit("Не найден seed_data.json. Получите файл из репозитория "
                  "или создайте его командой: python export_routes.py ИМЯ")
-    with open(JSON_PATH, encoding="utf-8") as f:
+    with open(JSON_PATH, encoding="utf-8-sig") as f:
         routes = json.load(f)
     if not isinstance(routes, list) or not routes:
         sys.exit("seed_data.json пуст или имеет неверный формат (ожидается список маршрутов).")
     for i, r in enumerate(routes, 1):
+        # Подставляем паспорт доступности в пустые поля
+        for field, value in PASSPORT.get(r.get("title"), {}).items():
+            if r.get(field) in (None, "", 0):
+                r[field] = value
         missing = [k for k in REQUIRED if r.get(k) in (None, "")]
         if missing:
             sys.exit(f"Маршрут №{i}: не заполнены поля {', '.join(missing)}.")
         if r["difficulty"] not in DIFFICULTIES:
             sys.exit(f"Маршрут «{r['title']}»: сложность должна быть одной из {DIFFICULTIES}.")
+        if not any(r.get(k) for k in ("surface", "max_slope", "rest_points")):
+            print(f"  ! у маршрута «{r['title']}» не заполнен паспорт доступности")
         if len(r.get("points", [])) < 2:
             print(f"  ! у маршрута «{r['title']}» меньше двух точек линии: на карте не будет пути")
     return routes
