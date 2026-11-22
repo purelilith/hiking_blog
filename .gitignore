@@ -6,3 +6,4 @@ __pycache__/
 venv/
 hiking.db
 static/img/posts/
+static/img/routes/
