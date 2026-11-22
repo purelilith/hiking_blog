@@ -9,7 +9,7 @@ PAGE = 5  # сколько маршрутов показывать за раз
 def popular(offset):
     """Следующие PAGE публичных маршрутов по просмотрам и признак, что есть ещё."""
     rows = get_db().execute(
-        "SELECT * FROM routes WHERE is_public = 1 ORDER BY views DESC, id DESC LIMIT ? OFFSET ?",
+        "SELECT * FROM routes WHERE is_public = 1 ORDER BY (kind = 'curated') DESC, views DESC, id DESC LIMIT ? OFFSET ?",
         (PAGE + 1, offset),
     ).fetchall()
     return rows[:PAGE], len(rows) > PAGE

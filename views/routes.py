@@ -22,6 +22,8 @@ TERRAINS = {"any": "Любая", "forest": "Лес", "mountain": "Горы", "ci
 PER_PAGE = 10
 PHOTO_TOKEN = re.compile(r"\[фото:(\d{1,9})\]")  # метка фото в тексте: [фото:12]
 MAX_PLACES = 50
+KINDS = {"curated": "Проверенные", "community": "От путешественников"}
+STALE_DAYS = 30  # через сколько дней данные считаются устаревшими
 
 ALLOWED_EXTENSIONS = {
     "jpg": "jpg",
@@ -438,6 +440,9 @@ def catalog():
         params.append(int(num("days")))
     if a.get("no_steps"):
         where.append("r.has_steps = 0")
+    if a.get("kind") in KINDS:
+        where.append("r.kind = ?")
+        params.append(a["kind"])
 
     order_map = {
         "new": "r.created_at DESC, r.id DESC",
@@ -466,7 +471,7 @@ def catalog():
 
     filters = {k: v for k, v in a.items() if k != "page" and v}
     return render_template("catalog.html", routes=routes, args=a, total=total, page=page,
-                           pages=pages, filters=filters, difficulty=DIFFICULTY, terrains=TERRAINS)
+                           pages=pages, filters=filters, difficulty=DIFFICULTY, terrains=TERRAINS, kinds=KINDS)
 
 
 @bp.route("/<int:route_id>")
@@ -505,6 +510,26 @@ def mine():
     ).fetchall()
     return render_template("my_routes.html", routes=routes, difficulty=DIFFICULTY)
 
+@bp.app_template_global("route_badges")
+def route_badges(r):
+    """Метки под названием маршрута: список пар (css-класс, текст)."""
+    badges = [("verified", "Проверенный маршрут")] if r["kind"] == "curated" \
+        else [("community", "От путешественника")]
+    if r["is_closed"]:
+        badges.append(("closed", "Сейчас закрыт"))
+    today = date.today().isoformat()
+    if (r["open_from"] and today < r["open_from"]) or (r["open_to"] and today > r["open_to"]):
+        badges.append(("warn", "Вне сезона"))
+    checked = r["source_checked"]
+    if not checked:
+        badges.append(("warn", "Дата проверки не указана"))
+    else:
+        try:
+            if (date.today() - date.fromisoformat(checked)).days > STALE_DAYS:
+                badges.append(("warn", "Данные могли устареть"))
+        except ValueError:
+            pass
+    return badges
 
 @bp.route("/photo", methods=("POST",))
 @limiter.limit("60 per hour")

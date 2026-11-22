@@ -8,6 +8,12 @@
 {% block content %}
   <a class="back-link" id="back-link" href="{{ url_for('routes.catalog') }}">← Назад</a>
   <h1>{{ route['title'] }}</h1>
+    <ul class="tags" aria-label="Метки маршрута">
+    {% for cls, text in route_badges(route) %}<li class="tag tag--{{ cls }}">{{ text }}</li>{% endfor %}
+  </ul>
+  {% if route['kind'] != 'curated' %}
+    <p class="hint">Этот маршрут добавил путешественник. Редакция информацию не проверяла: сверяйтесь с официальными источниками.</p>
+  {% endif %}
   <ul class="chips">
     <li>{{ route['region'] }}</li>
     <li>{{ route['length_km'] }} км</li>

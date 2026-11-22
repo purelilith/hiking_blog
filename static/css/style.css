@@ -559,3 +559,11 @@ details summary { cursor: pointer; font-weight: 700; margin-top: .75rem; }
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
   .btn:hover, .btn:active, .route-card:hover { transform: none; }
 }
+.tags { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0 0 .6rem; padding: 0; }
+.tag { padding: .15rem .7rem; font-size: .8rem; font-weight: 700; color: var(--text);
+       background: var(--pill-bg); border: 1.5px solid var(--line); border-radius: 999px; }
+.tag--verified { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+.tag--closed { color: #fff; background: #8f1d1d; border-color: #8f1d1d; }
+.tag--warn { color: #4a3300; background: #fff3d6; border-color: #b8860b; }
+html[data-theme="dark"] .tag--closed { color: #ffd7d7; background: #5c1616; border-color: #c24a4a; }
+html[data-theme="dark"] .tag--warn { color: #ffe9a8; background: #3a2e12; border-color: #c9a227; }

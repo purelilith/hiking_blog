@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash
 from app import app
 from db import get_db
 from views.routes import path_length_km
-import glob, os, shutil, sys
+import glob, os, shutil, sys, json
 
 GEAR = [
     ("Рюкзак по размеру", "Основное", "any", "any", 1),
@@ -91,7 +91,7 @@ ROUTES = [
         "title": "Большая Байкальская тропа: Листвянка — Большие Коты",
         "region": "Иркутская область",
         "difficulty": "medium", "days": 1, "season": "summer", "terrain": "mountain",
-        "length_km": 24,
+        "length_km": 24, "is_closed": 1,
         "description": (
             "Один из самых популярных и обустроенных участков Большой Байкальской тропы вдоль "
             "юго-западного берега Байкала, на территории Прибайкальского национального парка. "
@@ -169,9 +169,15 @@ ROUTES = [
     },
 ]
 
+JSON_PATH = os.path.join(BASE_DIR, "seed_data.json")
+if os.path.exists(JSON_PATH):
+    with open(JSON_PATH, encoding="utf-8") as f:
+        ROUTES = json.load(f)
+
 DEFAULTS = {
     "restrictions": None, "source_url": None, "source_checked": None, "open_from": None,
     "open_to": None, "surface": None, "max_slope": None, "has_steps": 0, "rest_points": None,
+    "kind": "curated", "is_closed": 0
 }
 
 
@@ -228,13 +234,18 @@ with app.app_context():
             """INSERT INTO routes
                (author_id, title, region, length_km, difficulty, days, season, terrain,
                 description, restrictions, source_url, source_checked, open_from, open_to,
-                is_public, surface, max_slope, has_steps, rest_points, views)
+                is_public, surface, max_slope, has_steps, rest_points, views, kind, is_closed)
                VALUES (:author_id, :title, :region, :length_km, :difficulty, :days, :season,
                 :terrain, :description, :restrictions, :source_url, :source_checked, :open_from,
-                :open_to, :is_public, :surface, :max_slope, :has_steps, :rest_points, :views)""",
+                :open_to, :is_public, :surface, :max_slope, :has_steps, :rest_points, :views,
+                :kind, :is_closed)""",
             data,
         )
         route_id = cur.lastrowid
+        db.executemany(
+            "INSERT INTO route_points (route_id, position, kind, lat, lon) VALUES (?, ?, 'path', ?, ?)",
+            [(route_id, i, lat, lon) for i, (lat, lon) in enumerate(r.get("points", []))],
+        )
         db.executemany(
             "INSERT INTO route_points (route_id, position, kind, lat, lon, name, note) "
             "VALUES (?, ?, 'place', ?, ?, ?, ?)",

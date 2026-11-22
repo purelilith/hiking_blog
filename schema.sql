@@ -32,6 +32,8 @@ CREATE TABLE routes (
     open_to        TEXT,
     is_public      INTEGER NOT NULL DEFAULT 1,
     views          INTEGER NOT NULL DEFAULT 0,
+    kind           TEXT NOT NULL DEFAULT 'community' CHECK (kind IN ('curated', 'community')),
+    is_closed      INTEGER NOT NULL DEFAULT 0,
     surface        TEXT,
     max_slope      TEXT,
     has_steps      INTEGER NOT NULL DEFAULT 0,

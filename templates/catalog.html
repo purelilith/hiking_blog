@@ -21,6 +21,7 @@
       <div class="field"><label for="region">Регион</label>
         <input id="region" name="region" type="text" placeholder="Например, Карелия" value="{{ args.get('region', '') }}"></div>
       {{ select("difficulty", "Сложность", difficulty) }}
+      {{ select("kind", "Тип маршрута", kinds) }}
       {{ select("season", "Сезон", SEASONS) }}
       {{ select("terrain", "Тип местности", terrains) }}
       <div class="field"><label for="min_km">Длина от, км</label>

@@ -6,6 +6,9 @@
   </div>
   <div class="route-body">
     <h3><a href="{{ url_for('routes.detail', route_id=r['id']) }}">{{ r['title'] }}</a></h3>
+        <ul class="tags" aria-label="Метки маршрута">
+          {% for cls, text in route_badges(r) %}<li class="tag tag--{{ cls }}">{{ text }}</li>{% endfor %}
+        </ul>
     <ul class="meta">
       <li><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><span>{{ r['region'] }}</span></li>
       <li><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg><span>Протяжённость: {{ r['length_km'] }} км</span></li>

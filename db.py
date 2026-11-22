@@ -52,6 +52,11 @@ def ensure_schema():
         caption TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
     db.execute("CREATE INDEX IF NOT EXISTS idx_photos_route ON route_photos(route_id)")
+    rcols = {r["name"] for r in db.execute("PRAGMA table_info(routes)")}
+    if "kind" not in rcols:
+        db.execute("ALTER TABLE routes ADD COLUMN kind TEXT NOT NULL DEFAULT 'community'")
+    if "is_closed" not in rcols:
+        db.execute("ALTER TABLE routes ADD COLUMN is_closed INTEGER NOT NULL DEFAULT 0")
     db.commit()
 
 
